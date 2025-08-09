@@ -1,65 +1,90 @@
 
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { User, Comment } from '../../types';
 import LoadingSpinner from '../LoadingSpinner';
 import { DEFAULT_AVATAR_URL } from '../../constants';
 import Modal from '../Modal';
 import RoleChangeModal from './RoleChangeModal';
+import { authService } from '../../services/authService';
+import { dataService } from '../../services/dataService';
 
 interface UserManagementViewProps {
-  users: User[];
-  comments: Comment[];
   currentUser: User;
-  onUpdateUserRole: (userId: string, newRole: 'user' | 'admin' | 'contractor') => Promise<void>;
-  onDeleteUser: (userId: string) => void;
   onBack: () => void;
 }
 
 const UserManagementView: React.FC<UserManagementViewProps> = ({
-  users,
-  comments,
   currentUser,
-  onUpdateUserRole,
-  onDeleteUser,
   onBack,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [roleModalState, setRoleModalState] = useState<{isOpen: boolean, user: User | null}>({isOpen: false, user: null});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [confirmationModal, setConfirmationModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; } | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [fetchedUsers, fetchedComments] = await Promise.all([
+          authService.getAllUsers(),
+          dataService.getComments(),
+        ]);
+        setUsers(fetchedUsers);
+        setComments(fetchedComments);
+      } catch (err) {
+        console.error("Failed to load user management data", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const commentCounts = useMemo(() => {
     const counts = new Map<string, number>();
     comments.forEach(comment => {
-      if (comment.userId) { // Guard against missing userId
+      if (comment.userId) { 
         counts.set(comment.userId.id, (counts.get(comment.userId.id) || 0) + 1);
       }
     });
     return counts;
   }, [comments]);
 
-  const handleOpenRoleModal = (user: User) => {
-    setRoleModalState({ isOpen: true, user });
-  };
-
-  const handleCloseRoleModal = () => {
-    setRoleModalState({ isOpen: false, user: null });
-  };
+  const handleOpenRoleModal = (user: User) => setRoleModalState({ isOpen: true, user });
+  const handleCloseRoleModal = () => setRoleModalState({ isOpen: false, user: null });
 
   const handleSaveRole = async (userId: string, newRole: 'user' | 'admin' | 'contractor') => {
-    await onUpdateUserRole(userId, newRole);
+    await authService.updateUserRole(userId, newRole);
+    setUsers(await authService.getAllUsers());
     handleCloseRoleModal();
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    if (currentUser.id === userId) return;
+    const userToDelete = users.find(u => u.id === userId);
+    if (!userToDelete) return;
+    setConfirmationModal({
+        isOpen: true,
+        title: "Confirm User Deletion",
+        message: `Are you sure you want to delete "${userToDelete.username}"? This will also remove all their comments and cannot be undone.`,
+        onConfirm: async () => {
+            await authService.deleteUser(userId);
+            setUsers(await authService.getAllUsers());
+            setComments(prev => prev.filter(c => c.userId.id !== userId));
+            setConfirmationModal(null);
+        }
+    });
   };
 
   const getRoleClasses = (role: 'user' | 'admin' | 'contractor') => {
     switch (role) {
-      case 'admin':
-        return 'bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300';
-      case 'contractor':
-        return 'bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-300';
-      case 'user':
-      default:
-        return 'bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-300';
+      case 'admin': return 'bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300';
+      case 'contractor': return 'bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-300';
+      default: return 'bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-300';
     }
   };
 
@@ -76,7 +101,16 @@ const UserManagementView: React.FC<UserManagementViewProps> = ({
     }));
   }, [filteredUsers]);
 
+  if (isLoading) {
+    return (
+        <div className="flex items-center justify-center h-96">
+            <LoadingSpinner size="lg" message="Loading user data..."/>
+        </div>
+    );
+  }
+
   return (
+    <>
     <div className="max-w-5xl mx-auto my-8 p-4 sm:p-6 md:p-8 bg-primary-100/95 dark:bg-primary-950/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-primary-200/50 dark:border-primary-800/50">
       <div className="flex justify-between items-start mb-6">
         <h1 className="font-serif text-4xl font-bold text-primary-800 dark:text-primary-100">User Management</h1>
@@ -138,7 +172,7 @@ const UserManagementView: React.FC<UserManagementViewProps> = ({
             </div>
             <div className="flex justify-end items-center space-x-3 text-sm">
                 <button onClick={() => handleOpenRoleModal(user)} disabled={user.id === currentUser.id} className="font-semibold text-secondary-600 hover:text-secondary-700 dark:text-secondary-400 dark:hover:text-secondary-300 disabled:opacity-50 disabled:cursor-not-allowed">Change Role</button>
-                <button onClick={() => onDeleteUser(user.id)} disabled={user.id === currentUser.id} className="font-semibold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed">Delete</button>
+                <button onClick={() => handleDeleteUser(user.id)} disabled={user.id === currentUser.id} className="font-semibold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed">Delete</button>
             </div>
           </div>
         ))}
@@ -181,7 +215,7 @@ const UserManagementView: React.FC<UserManagementViewProps> = ({
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end items-center space-x-4">
                        <button onClick={() => handleOpenRoleModal(user)} disabled={user.id === currentUser.id} className="font-semibold text-secondary-600 hover:text-secondary-700 dark:text-secondary-400 dark:hover:text-secondary-300 disabled:opacity-50 disabled:cursor-not-allowed" title={user.id === currentUser.id ? "Cannot change own role" : `Change role for ${user.username}`}>Change Role</button>
-                      <button onClick={() => onDeleteUser(user.id)} disabled={user.id === currentUser.id} className="font-semibold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed" title={user.id === currentUser.id ? "Cannot delete self" : "Delete user"}>Delete</button>
+                      <button onClick={() => handleDeleteUser(user.id)} disabled={user.id === currentUser.id} className="font-semibold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed" title={user.id === currentUser.id ? "Cannot delete self" : "Delete user"}>Delete</button>
                     </div>
                 </td>
               </tr>
@@ -217,7 +251,23 @@ const UserManagementView: React.FC<UserManagementViewProps> = ({
             onSave={handleSaveRole}
         />
       )}
+      {confirmationModal && (
+        <Modal 
+            isOpen={confirmationModal.isOpen} 
+            onClose={() => setConfirmationModal(null)} 
+            title={confirmationModal.title}
+            footerContent={
+                <>
+                  <button onClick={() => setConfirmationModal(null)} className="px-4 py-2 mr-2 bg-primary-500 hover:bg-primary-400 text-white text-sm font-medium rounded-md">Cancel</button>
+                  <button onClick={confirmationModal.onConfirm} className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">Confirm</button>
+                </>
+            }
+        >
+          <p>{confirmationModal.message}</p>
+        </Modal>
+      )}
     </div>
+    </>
   );
 };
 
