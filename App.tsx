@@ -828,7 +828,7 @@ const App: React.FC = () => {
       
       <div className="fixed bottom-6 right-6 z-40 flex flex-col items-center space-y-3">
         {showScrollToTop && <ScrollToTopButton />}
-        {currentUser && hasAppChrome && <FloatingChatButton unreadCount={unreadChatCount} onClick={showChatView}/>}
+        {currentUser && hasAppChrome && currentView !== 'chapterView' && <FloatingChatButton unreadCount={unreadChatCount} onClick={showChatView}/>}
       </div>
 
       <Modal isOpen={!!error} onClose={handleCloseErrorModal} title="Operation Alert" type="error"><p>{error}</p></Modal>
