@@ -1,6 +1,5 @@
 
 
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Story, User, Volume, StoryChapter, Comment, ContentBlock, ContentBlockText, ContentBlockImage, ChatThread, LeaderboardUser, SiteSetting } from './types';
 import { createText, createVolume, createChapter, createImage, DEFAULT_AVATAR_URL } from './constants';
@@ -37,7 +36,6 @@ import BackgroundMusicPlayer from './components/BackgroundMusicPlayer';
 const THEME_KEY = 'ai_story_teller_theme';
 const PROSE_SIZE_KEY = 'imnovel_prose_size';
 const STORIES_PER_PAGE = 8;
-const REFETCH_INTERVAL = 3600 * 1000; // 1 hour in milliseconds
 
 type View = 'mainList' | 'storyDetail' | 'chapterView' | 'userProfile' | 'userManagement' | 'chat' | 'auth' | 'storyEdit' | 'myStories' | 'allyManagement' | 'teamStories' | 'siteSettings' | 'backgroundPreview';
 type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
@@ -47,7 +45,11 @@ type StatusFilter = 'all' | 'Ongoing' | 'Completed' | 'Dropped';
 const PROSE_CLASSES = ['prose-sm', 'prose-base', 'prose-lg', 'prose-xl', 'prose-2xl', 'prose-3xl', 'prose-4xl'];
 
 const App: React.FC = () => {
-  const [stories, setStories] = useState<Story[]>([]);
+  const [paginatedStories, setPaginatedStories] = useState<Story[]>([]);
+  const [hotStories, setHotStories] = useState<Story[]>([]);
+  const [recentStories, setRecentStories] = useState<Story[]>([]);
+  const [managementStories, setManagementStories] = useState<Story[]>([]);
+
   const [comments, setComments] = useState<Comment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([]);
@@ -64,6 +66,7 @@ const App: React.FC = () => {
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
 
   const [isLoadingInitial, setIsLoadingInitial] = useState<boolean>(true);
+  const [isFetchingList, setIsFetchingList] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoModal, setInfoModal] = useState<{isOpen: boolean, title: string, message: string, showFireworks?: boolean} | null>(null);
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -86,22 +89,25 @@ const App: React.FC = () => {
   const [genreFilter, setGenreFilter] = useState<{ [key: string]: 'include' | 'exclude' }>({});
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [proseSizeClass, setProseSizeClass] = useState('prose-lg');
   
-  const fetchAllData = useCallback(async (user: User | null) => {
+  const fetchInitialStaticData = useCallback(async (user: User | null) => {
       try {
-        const [fetchedStories, fetchedComments, publicUsers, leaderboardData, fetchedSettings] = await Promise.all([
-          dataService.getStories(),
+        const [fetchedComments, publicUsers, leaderboardData, fetchedSettings, fetchedHot, fetchedRecent] = await Promise.all([
           dataService.getComments(),
           authService.getPublicUsers(),
           authService.getLeaderboard(),
           dataService.getSiteSettings(),
+          dataService.getHotStories(),
+          dataService.getRecentStories(),
         ]);
-        setStories(fetchedStories);
         setComments(fetchedComments);
         setLeaderboardUsers(leaderboardData);
         setUsers(publicUsers);
         setSiteSettings(fetchedSettings);
+        setHotStories(fetchedHot);
+        setRecentStories(fetchedRecent);
 
         if (user) {
             if (user.role === 'admin' || user.role === 'contractor') {
@@ -120,6 +126,34 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const fetchPaginatedStories = async () => {
+      setIsFetchingList(true);
+      try {
+        const includeGenres = Object.keys(genreFilter).filter(g => genreFilter[g] === 'include');
+        const excludeGenres = Object.keys(genreFilter).filter(g => genreFilter[g] === 'exclude');
+
+        const data = await dataService.getStories({
+          page: currentPage,
+          limit: STORIES_PER_PAGE,
+          search: searchTerm,
+          status: statusFilter,
+          genresInclude: includeGenres,
+          genresExclude: excludeGenres,
+        });
+
+        setPaginatedStories(data.stories);
+        setTotalPages(data.pages);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load stories.");
+      } finally {
+        setIsFetchingList(false);
+      }
+    };
+
+    if(!isLoadingInitial) fetchPaginatedStories();
+  }, [currentPage, searchTerm, genreFilter, statusFilter, isLoadingInitial]);
+
+  useEffect(() => {
     const storedTheme = localStorage.getItem(THEME_KEY) as Theme | null;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(storedTheme || (prefersDark ? 'dark' : 'light'));
@@ -133,7 +167,7 @@ const App: React.FC = () => {
       setIsLoadingInitial(true);
       const user = await authService.getCurrentUser();
       setCurrentUser(user);
-      await fetchAllData(user);
+      await fetchInitialStaticData(user);
       setIsLoadingInitial(false);
 
       const urlParams = new URLSearchParams(window.location.search);
@@ -147,7 +181,7 @@ const App: React.FC = () => {
 
     checkAuthAndFetchData();
     
-  }, [fetchAllData]);
+  }, [fetchInitialStaticData]);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -213,46 +247,10 @@ const App: React.FC = () => {
     confirmationModal,
     currentView
   ]);
-
-  useEffect(() => {
-    let initialTimeoutId: ReturnType<typeof setTimeout>;
-    let hourlyIntervalId: ReturnType<typeof setInterval>;
-
-    const scheduleNextUpdate = () => {
-      const now = new Date();
-      const nextUpdate = new Date(now);
-
-      if (now.getMinutes() >= 30) {
-        nextUpdate.setHours(now.getHours() + 1);
-        nextUpdate.setMinutes(30, 0, 0);
-      } else {
-        nextUpdate.setMinutes(30, 0, 0);
-      }
-      
-      const delay = nextUpdate.getTime() - now.getTime();
-
-      initialTimeoutId = setTimeout(() => {
-        console.log(`Scheduled update triggered at xx:30.`);
-        fetchAllData(currentUser);
-        hourlyIntervalId = setInterval(() => {
-          console.log('Hourly update triggered.');
-          fetchAllData(currentUser);
-        }, REFETCH_INTERVAL);
-
-      }, delay);
-    };
-
-    scheduleNextUpdate();
-
-    return () => {
-      clearTimeout(initialTimeoutId);
-      clearInterval(hourlyIntervalId);
-    };
-  }, [currentUser, fetchAllData]);
   
   const handleAuthSuccess = async (user: User) => {
      setCurrentUser(user);
-     await fetchAllData(user);
+     await fetchInitialStaticData(user);
      setCurrentView('mainList');
      setAuthViewProps({ initialMode: 'login', resetToken: null });
   };
@@ -292,9 +290,29 @@ const App: React.FC = () => {
   
   const showUserProfile = useCallback(() => { if (currentUser) { setCurrentView('userProfile'); window.scrollTo(0, 0); } }, [currentUser]);
   const showUserManagement = useCallback(() => { if (currentUser?.role === 'admin') { setCurrentView('userManagement'); window.scrollTo(0, 0); } }, [currentUser]);
-  const showMyStories = useCallback(() => { if (currentUser?.role === 'admin' || currentUser?.role === 'contractor') { setCurrentView('myStories'); window.scrollTo(0, 0); } }, [currentUser]);
+  
+  const showMyStories = useCallback(async () => {
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'contractor')) return;
+    setIsFetchingList(true);
+    const creatorId = currentUser.role === 'admin' ? undefined : currentUser.id;
+    const { stories } = await dataService.getStories({ creatorId, limit: 1000 }); // High limit for "all"
+    setManagementStories(stories);
+    setIsFetchingList(false);
+    setCurrentView('myStories');
+    window.scrollTo(0, 0);
+  }, [currentUser]);
+
+  const showTeamStories = useCallback(async () => {
+    if (!currentUser?.allyOf) return;
+    setIsFetchingList(true);
+    const { stories } = await dataService.getStories({ creatorId: currentUser.allyOf.id, limit: 1000 });
+    setManagementStories(stories);
+    setIsFetchingList(false);
+    setCurrentView('teamStories');
+    window.scrollTo(0, 0);
+  }, [currentUser]);
+
   const showAllyManagement = useCallback(() => { if (currentUser?.role === 'contractor') { setCurrentView('allyManagement'); window.scrollTo(0, 0); } }, [currentUser]);
-  const showTeamStories = useCallback(() => { if (currentUser?.allyOf) { setCurrentView('teamStories'); window.scrollTo(0,0); } }, [currentUser]);
   const showSiteSettings = useCallback(() => { if (currentUser?.role === 'admin') { setCurrentView('siteSettings'); window.scrollTo(0, 0); } }, [currentUser]);
 
   const handleShowBackgroundPreview = useCallback(() => {
@@ -307,25 +325,23 @@ const App: React.FC = () => {
   const showChatView = useCallback(() => { if (!currentUser) { showAuthView('login'); return; } setCurrentView('chat'); }, [currentUser]);
   const handleBackFromChat = useCallback(() => { setCurrentView('mainList'); }, []);
 
-  const showChapterView = useCallback((storyId: string, volumeId: string, chapterId: string) => {
-    const story = stories.find(s => s.id === storyId);
-    if (story) {
-      const volume = story.volumes.find(v => v.id === volumeId);
+  const showChapterView = useCallback((volumeId: string, chapterId: string) => {
+    if (selectedStory) {
+      const volume = selectedStory.volumes.find(v => v.id === volumeId);
       if (volume && volume.chapters.find(ch => ch.id === chapterId)) {
-        setSelectedStory(story); 
         setSelectedVolumeId(volumeId);
         setSelectedChapterId(chapterId);
         setCurrentView('chapterView');
         window.scrollTo(0, 0);
       } else {
         setError(`Chapter or Volume not found. Returning to story details.`);
-        showStoryDetail(story, story.volumes.find(v => v.id === volumeId) ? volumeId : null); 
+        showStoryDetail(selectedStory, volumeId); 
       }
     } else {
-      setError(`Story with ID ${storyId} not found. Returning to main list.`);
+      setError(`Story not found. Returning to main list.`);
       showMainList();
     }
-  }, [stories, showMainList, showStoryDetail]);
+  }, [selectedStory, showMainList, showStoryDetail]);
   
   const navigateChapterInView = useCallback((direction: 'prev' | 'next') => {
     if (!selectedStory || !selectedVolumeId || !selectedChapterId) return;
@@ -347,7 +363,7 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     await authService.logout();
     setCurrentUser(null);
-    await fetchAllData(null); 
+    await fetchInitialStaticData(null); 
     showMainList(); 
   };
   
@@ -414,15 +430,8 @@ const App: React.FC = () => {
     }
     try {
       const savedStory = await dataService.saveStory(editedStory);
-      setStories(prev => {
-        const index = prev.findIndex(s => s.id === savedStory.id);
-        if (index !== -1) {
-          const newStories = [...prev];
-          newStories[index] = savedStory;
-          return newStories;
-        }
-        return [savedStory, ...prev];
-      });
+      setHotStories(await dataService.getHotStories());
+      setRecentStories(await dataService.getRecentStories());
       setStoryInEditSession(null);
       showStoryDetail(savedStory);
     } catch (err) {
@@ -431,8 +440,8 @@ const App: React.FC = () => {
   }, [currentUser, showStoryDetail]);
 
   const handleDeleteStory = (storyId: string) => {
-     if (currentUser?.role !== 'admin' && currentUser?.role !== 'contractor' && !currentUser.allyOf) { setError("You are not authorized."); return; }
-     const storyToDelete = stories.find(s=>s.id === storyId);
+     if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'contractor' && !currentUser.allyOf)) { setError("You are not authorized."); return; }
+     const storyToDelete = paginatedStories.find(s=>s.id === storyId) || managementStories.find(s => s.id === storyId);
      if (!storyToDelete) { setError("Story not found for deletion."); return; }
     
      setConfirmationModal({
@@ -441,7 +450,19 @@ const App: React.FC = () => {
       message: `Are you sure you want to delete "${storyToDelete.title}"? This cannot be undone.`,
       onConfirm: async () => {
         await dataService.deleteStory(storyId);
-        setStories(prev => prev.filter(s => s.id !== storyId));
+        // Refetch relevant lists
+        if(currentView === 'mainList') {
+          const data = await dataService.getStories({ page: currentPage, limit: STORIES_PER_PAGE, search: searchTerm, status: statusFilter, genresInclude: Object.keys(genreFilter).filter(g=>genreFilter[g]==='include'), genresExclude: Object.keys(genreFilter).filter(g=>genreFilter[g]==='exclude') });
+          setPaginatedStories(data.stories);
+          setTotalPages(data.pages);
+        } else if (currentView === 'myStories') {
+          showMyStories();
+        } else if (currentView === 'teamStories') {
+          showTeamStories();
+        }
+        setHotStories(await dataService.getHotStories());
+        setRecentStories(await dataService.getRecentStories());
+
         setComments(prev => prev.filter(c => c.storyId !== storyId));
         if (selectedStory?.id === storyId) {
             showMainList();
@@ -500,10 +521,8 @@ const App: React.FC = () => {
     if (!currentUser) { showAuthView('login'); return; }
     try {
         const updatedStory = await dataService.toggleBookmark(storyId);
-        setStories(prev => prev.map(s => s.id === storyId ? updatedStory : s));
-        if (selectedStory?.id === storyId) {
-            setSelectedStory(updatedStory);
-        }
+        if (selectedStory?.id === storyId) setSelectedStory(updatedStory);
+        setPaginatedStories(prev => prev.map(s => s.id === storyId ? updatedStory : s));
     } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update bookmark.");
     }
@@ -513,10 +532,8 @@ const App: React.FC = () => {
     if (!currentUser) { showAuthView('login'); return; }
     try {
         const updatedStory = await dataService.toggleStoryLike(storyId);
-        setStories(prev => prev.map(s => s.id === storyId ? updatedStory : s));
-        if (selectedStory?.id === storyId) {
-            setSelectedStory(updatedStory);
-        }
+        if (selectedStory?.id === storyId) setSelectedStory(updatedStory);
+        setPaginatedStories(prev => prev.map(s => s.id === storyId ? updatedStory : s));
     } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update like status.");
     }
@@ -526,10 +543,8 @@ const App: React.FC = () => {
     if (!currentUser) { showAuthView('login'); return; }
     try {
         const updatedStory = await dataService.submitStoryRating(storyId, score);
-        setStories(prev => prev.map(s => s.id === storyId ? updatedStory : s));
-        if (selectedStory?.id === storyId) {
-            setSelectedStory(updatedStory);
-        }
+        if (selectedStory?.id === storyId) setSelectedStory(updatedStory);
+        setPaginatedStories(prev => prev.map(s => s.id === storyId ? updatedStory : s));
         setInfoModal({isOpen: true, title: "Cảm ơn bạn!", message: "Đánh giá của bạn đã được ghi nhận."})
     } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to submit rating.");
@@ -707,43 +722,6 @@ const App: React.FC = () => {
         }
     });
   };
-
-  const allGenres = useMemo(() => Array.from(new Set(stories.flatMap(s => s.genres))).sort(), [stories]);
-
-  const baseFilteredStories = useMemo(() => {
-    const includeGenres = Object.keys(genreFilter).filter(g => genreFilter[g] === 'include');
-    const excludeGenres = Object.keys(genreFilter).filter(g => genreFilter[g] === 'exclude');
-
-    return stories.filter(story => {
-        if (statusFilter !== 'all' && story.status !== statusFilter) {
-            return false;
-        }
-        if (includeGenres.length > 0) {
-            const hasAllIncluded = includeGenres.every(g => story.genres.includes(g));
-            if (!hasAllIncluded) return false;
-        }
-        if (excludeGenres.length > 0) {
-            const hasAnyExcluded = excludeGenres.some(g => story.genres.includes(g));
-            if (hasAnyExcluded) return false;
-        }
-        return true;
-    });
-  }, [stories, genreFilter, statusFilter]);
-
-  const filteredStoriesForMainList = useMemo(() => {
-    if (!searchTerm) {
-        return baseFilteredStories;
-    }
-    const lowercasedTerm = searchTerm.toLowerCase();
-    return baseFilteredStories.filter(story => {
-        const titleMatch = story.title.toLowerCase().includes(lowercasedTerm);
-        const altTitlesMatch = story.alternativeTitles?.some(alt => alt.toLowerCase().includes(lowercasedTerm));
-        return titleMatch || !!altTitlesMatch;
-    });
-  }, [baseFilteredStories, searchTerm]);
-
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredStoriesForMainList.length / STORIES_PER_PAGE)), [filteredStoriesForMainList.length]);
-  const paginatedStories = useMemo(() => filteredStoriesForMainList.slice((currentPage - 1) * STORIES_PER_PAGE, currentPage * STORIES_PER_PAGE), [filteredStoriesForMainList, currentPage]);
   
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -752,13 +730,13 @@ const App: React.FC = () => {
     }
   };
   
-  const recentlyUpdatedStories = useMemo(() => 
-    [...baseFilteredStories].sort((a, b) => (b.lastUpdated || 0) - (a.lastUpdated || 0)).slice(0, 10), 
-    [baseFilteredStories]);
-    
-  const hotStories = useMemo(() => 
-    baseFilteredStories.filter(s => s.hot).slice(0, 10), 
-    [baseFilteredStories]);
+  const allGenres = useMemo(() => {
+    const genreSet = new Set<string>();
+    [...hotStories, ...recentStories, ...paginatedStories].forEach(s => {
+        s.genres.forEach(g => genreSet.add(g));
+    });
+    return Array.from(genreSet).sort();
+  }, [hotStories, recentStories, paginatedStories]);
 
   const selectedStoryComments = useMemo(() => comments.filter(c => c.storyId === selectedStory?.id), [comments, selectedStory]);
   const selectedChapterComments = useMemo(() => comments.filter(c => c.storyId === selectedStory?.id && c.chapterId === selectedChapterId), [comments, selectedStory, selectedChapterId]);
@@ -781,19 +759,19 @@ const App: React.FC = () => {
 
   const renderView = () => {
     switch (currentView) {
-      case 'mainList': return <StoryHub hotStories={hotStories} recentStories={recentlyUpdatedStories} paginatedStories={paginatedStories} allGenres={allGenres} genreFilter={genreFilter} statusFilter={statusFilter} currentUser={currentUser} onSelectStory={handleSelectStoryFromList} onGenreChange={handleGenreFilterChange} onStatusChange={setStatusFilter} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />;
-      case 'storyDetail': return selectedStory ? <StoryDetailView story={selectedStory} selectedVolumeId={selectedVolumeId} onSelectVolume={handleSelectVolume} onBackToMainList={showMainList} onNavigateToChapter={(volumeId, chapterId) => showChapterView(selectedStory.id, volumeId, chapterId)} comments={selectedStoryComments} onAddComment={(storyId, text, parentId) => handleAddComment(storyId, text, parentId, null)} onToggleCommentLike={handleToggleCommentLike} currentUser={currentUser} onDeleteComment={handleDeleteComment} onTogglePinComment={handleTogglePinComment} onEditStory={handleStartEditSession} onToggleBookmark={handleToggleBookmark} onToggleLike={handleToggleStoryLike} onRateStory={handleRateStory} onLoginClick={() => showAuthView('login')} /> : (showMainList(), null);
-      case 'chapterView': return selectedStory && selectedVolumeId && selectedChapterId ? <ChapterView story={selectedStory} volumeId={selectedVolumeId} chapterId={selectedChapterId} comments={selectedChapterComments} onNavigateChapter={navigateChapterInView} onGoToStoryDetail={(storyId, volId) => showStoryDetail(stories.find(s=>s.id === storyId)!, volId)} currentUser={currentUser} onAddComment={handleAddComment} onDeleteComment={handleDeleteComment} onToggleCommentLike={handleToggleCommentLike} onTogglePinComment={handleTogglePinComment} onLoginClick={() => showAuthView('login')} proseSizeClass={proseSizeClass} onProseSizeChange={handleProseSizeChange} onSelectChapter={handleChapterSelection}/> : (selectedStory ? showStoryDetail(selectedStory, selectedVolumeId) : showMainList(), null);
+      case 'mainList': return isFetchingList && paginatedStories.length === 0 ? <LoadingSpinner size="lg" message="Fetching stories..."/> : <StoryHub hotStories={hotStories} recentStories={recentStories} paginatedStories={paginatedStories} allGenres={allGenres} genreFilter={genreFilter} statusFilter={statusFilter} currentUser={currentUser} onSelectStory={handleSelectStoryFromList} onGenreChange={handleGenreFilterChange} onStatusChange={setStatusFilter} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />;
+      case 'storyDetail': return selectedStory ? <StoryDetailView story={selectedStory} selectedVolumeId={selectedVolumeId} onSelectVolume={handleSelectVolume} onBackToMainList={showMainList} onNavigateToChapter={showChapterView} comments={selectedStoryComments} onAddComment={(storyId, text, parentId) => handleAddComment(storyId, text, parentId, null)} onToggleCommentLike={handleToggleCommentLike} currentUser={currentUser} onDeleteComment={handleDeleteComment} onTogglePinComment={handleTogglePinComment} onEditStory={handleStartEditSession} onToggleBookmark={handleToggleBookmark} onToggleLike={handleToggleStoryLike} onRateStory={handleRateStory} onLoginClick={() => showAuthView('login')} /> : (showMainList(), null);
+      case 'chapterView': return selectedStory && selectedVolumeId && selectedChapterId ? <ChapterView story={selectedStory} volumeId={selectedVolumeId} chapterId={selectedChapterId} comments={selectedChapterComments} onNavigateChapter={navigateChapterInView} onGoToStoryDetail={(_, volId) => showStoryDetail(selectedStory, volId)} currentUser={currentUser} onAddComment={handleAddComment} onDeleteComment={handleDeleteComment} onToggleCommentLike={handleToggleCommentLike} onTogglePinComment={handleTogglePinComment} onLoginClick={() => showAuthView('login')} proseSizeClass={proseSizeClass} onProseSizeChange={handleProseSizeChange} onSelectChapter={handleChapterSelection}/> : (selectedStory ? showStoryDetail(selectedStory, selectedVolumeId) : showMainList(), null);
       case 'userProfile': return currentUser ? <UserProfileView currentUser={currentUser} onUpdateAvatar={handleUpdateAvatar} onUpdateRace={handleUpdateRace} onBack={showMainList} theme={theme} onShowChangePasswordModal={() => setShowChangePasswordModal(true)} onLeaveAllyTeam={handleLeaveAllyTeam} /> : (showMainList(), null);
       case 'userManagement': return currentUser?.role === 'admin' ? <UserManagementView users={users} comments={comments} currentUser={currentUser} onUpdateUserRole={handleUpdateUserRole} onDeleteUser={handleDeleteUser} onBack={showMainList}/> : (showMainList(), null);
-      case 'myStories': return currentUser ? <MyStoriesView allStories={stories} currentUser={currentUser} onAddNewStory={() => handleStartEditSession()} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /> : (showMainList(), null);
+      case 'myStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser ? <MyStoriesView stories={managementStories} currentUser={currentUser} onAddNewStory={() => handleStartEditSession()} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /> : (showMainList(), null));
       case 'allyManagement': return currentUser?.role === 'contractor' ? <AllyManagementView currentUser={currentUser} allUsers={users} onManageAlly={handleManageAlly} onBack={showMainList}/> : (showMainList(), null);
-      case 'teamStories': return currentUser?.allyOf ? <TeamStoriesView allStories={stories} currentUser={currentUser} onAddNewStory={() => handleStartEditSession()} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /> : (showMainList(), null);
+      case 'teamStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser?.allyOf ? <TeamStoriesView stories={managementStories} currentUser={currentUser} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /> : (showMainList(), null));
       case 'chat': return currentUser ? <ChatView currentUser={currentUser} chatThreads={chatThreads} onSendMessage={handleSendMessage} onMarkMessagesAsRead={handleMarkMessagesAsRead} onDeleteThread={handleDeleteThread} onBack={handleBackFromChat}/> : (showMainList(), null);
       case 'siteSettings': return currentUser?.role === 'admin' ? <SiteSettingsView initialSettings={siteSettings} onSave={handleSaveSiteSettings} onBack={showMainList} onShowBackgroundPreview={handleShowBackgroundPreview} /> : (showMainList(), null);
       case 'backgroundPreview': return <BackgroundPreviewView onBack={() => setCurrentView(previousView)} theme={theme} onToggleTheme={toggleTheme} />;
       case 'auth': return <AuthView {...authViewProps} onBack={showMainList} onLoginSuccess={handleAuthSuccess} onRegisterSuccess={handleRegisterSuccess} siteSettings={siteSettings} />;
-      case 'storyEdit': return storyInEditSession ? <StoryEditView story={storyInEditSession} onSave={handleSaveEditedStory} onCancel={handleCancelEditSession} allStories={stories} /> : (showMainList(), null);
+      case 'storyEdit': return storyInEditSession ? <StoryEditView story={storyInEditSession} onSave={handleSaveEditedStory} onCancel={handleCancelEditSession} allStories={paginatedStories} /> : (showMainList(), null);
       default: return null;
     }
   };
