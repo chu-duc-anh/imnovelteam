@@ -1,13 +1,12 @@
 
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Story, User } from '../types';
 import StoryCard from './StoryCard';
 
 interface TeamStoriesViewProps {
-  allStories: Story[];
+  stories: Story[];
   currentUser: User;
-  onAddNewStory: () => void;
   onEditStory: (story: Story) => void;
   onDeleteStory: (storyId: string) => void;
   onBack: () => void;
@@ -15,19 +14,13 @@ interface TeamStoriesViewProps {
 }
 
 const TeamStoriesView: React.FC<TeamStoriesViewProps> = ({
-  allStories,
+  stories,
   currentUser,
-  onAddNewStory,
   onEditStory,
   onDeleteStory,
   onBack,
   onSelectStory
 }) => {
-  const teamStories = useMemo(() => {
-    if (!currentUser.allyOf) return [];
-    return allStories.filter(story => story.creatorId?.id === currentUser.allyOf?.id);
-  }, [allStories, currentUser]);
-
   const title = "Giao diện truyện của team";
 
   return (
@@ -53,14 +46,14 @@ const TeamStoriesView: React.FC<TeamStoriesViewProps> = ({
         </p>
       </div>
 
-       {teamStories.length === 0 ? (
+       {stories.length === 0 ? (
          <div className="text-center text-primary-600 dark:text-primary-400 py-16 px-6 bg-white/50 dark:bg-primary-900/50 rounded-xl">
             <h3 className="font-serif text-2xl font-bold mb-2">Không tìm thấy truyện nào</h3>
             <p>Nhà thầu của bạn chưa tạo truyện nào, hoặc bạn chưa được chỉ định làm đồng minh.</p>
          </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
-          {teamStories.map((story) => (
+          {stories.map((story) => (
             <StoryCard 
               key={story.id} 
               story={story} 
