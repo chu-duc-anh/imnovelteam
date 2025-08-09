@@ -4,7 +4,7 @@
 import { Story, ContentBlock, ContentBlockText, ContentBlockImage, Volume, StoryChapter } from './types';
 import { generateId } from './utils'; // For generating IDs
 
-export const SERVER_ORIGIN = 'http://localhost:5000';
+export const SERVER_ORIGIN = 'https://imnovelteambackend.onrender.com';
 export const GEMINI_TEXT_MODEL = 'gemini-2.5-flash';
 
 // Default SVG avatar placeholder - Using the one from previous interactions
