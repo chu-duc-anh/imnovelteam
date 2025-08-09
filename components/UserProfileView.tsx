@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef } from 'react';
 import { User } from '../types';
 import { fileToDataUrl } from '../utils';
@@ -12,18 +11,24 @@ interface UserProfileViewProps {
   currentUser: User;
   onUpdateAvatar: (newAvatarDataUrl: string) => Promise<void>;
   onUpdateRace: (newRace: string) => Promise<void>;
-  onShowChangePasswordModal: () => void;
+  onUpdatePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   onLeaveAllyTeam: () => void;
   onBack: () => void;
   theme: 'light' | 'dark';
 }
 
-const UserProfileView: React.FC<UserProfileViewProps> = ({ currentUser, onUpdateAvatar, onUpdateRace, onShowChangePasswordModal, onLeaveAllyTeam, onBack, theme }) => {
+const UserProfileView: React.FC<UserProfileViewProps> = ({ currentUser, onUpdateAvatar, onUpdateRace, onUpdatePassword, onLeaveAllyTeam, onBack, theme }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showRaceModal, setShowRaceModal] = useState(false);
   const [cropModalState, setCropModalState] = useState({ isOpen: false, imageSrc: '' });
+
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const isEmailUser = !!currentUser.passwordHash;
   const isArchangel = currentUser.race === 'Tổng lãnh thiên thần';
@@ -66,8 +71,38 @@ const UserProfileView: React.FC<UserProfileViewProps> = ({ currentUser, onUpdate
     }
   };
 
-  const buttonStyle = "w-full sm:w-auto px-4 py-2 bg-primary-200 dark:bg-primary-700/80 text-primary-800 dark:text-primary-200 font-semibold rounded-lg hover:bg-primary-300 dark:hover:bg-primary-600/80 transition-colors duration-300 shadow-sm";
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
 
+    if (!oldPassword || !newPassword) {
+      setPasswordError("All fields are required.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError("New password must be at least 6 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      await onUpdatePassword(oldPassword, newPassword);
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Failed to update password.");
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const buttonStyle = "w-full sm:w-auto px-4 py-2 bg-primary-200 dark:bg-primary-700/80 text-primary-800 dark:text-primary-200 font-semibold rounded-lg hover:bg-primary-300 dark:hover:bg-primary-600/80 transition-colors duration-300 shadow-sm";
+  const inputStyle = "w-full px-3 py-2 bg-white dark:bg-primary-800 border border-primary-300 dark:border-primary-700 rounded-lg shadow-sm focus:ring-secondary-500 focus:border-secondary-500 text-primary-900 dark:text-primary-100 placeholder-primary-400";
 
   return (
     <>
@@ -143,17 +178,36 @@ const UserProfileView: React.FC<UserProfileViewProps> = ({ currentUser, onUpdate
             </button>
           )}
           {currentUser.role !== 'admin' && (
-            <>
               <button onClick={() => setShowRaceModal(true)} className={buttonStyle}>Cập nhật chủng loài</button>
-            </>
-          )}
-          {isEmailUser && (
-            <button onClick={onShowChangePasswordModal} className={buttonStyle}>
-              Change Password
-            </button>
           )}
         </div>
       </div>
+
+      {isEmailUser && (
+        <div className="mt-8 pt-6 border-t border-primary-200 dark:border-primary-700">
+            <h3 className="font-serif text-xl font-semibold text-primary-800 dark:text-primary-200 mb-4">Thay đổi mật khẩu</h3>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-sm">
+                {passwordError && <p className="text-red-500 bg-red-100 dark:bg-red-900/50 p-3 rounded-lg text-sm">{passwordError}</p>}
+                <div>
+                    <label htmlFor="current-password"  className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">Mật khẩu hiện tại</label>
+                    <input id="current-password" type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} required className={inputStyle} />
+                </div>
+                <div>
+                    <label htmlFor="new-password"  className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">Mật khẩu mới</label>
+                    <input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className={inputStyle} />
+                </div>
+                <div>
+                    <label htmlFor="confirm-new-password"  className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">Xác nhận mật khẩu mới</label>
+                    <input id="confirm-new-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className={inputStyle} />
+                </div>
+                 <div>
+                    <button type="submit" disabled={isUpdatingPassword} className="px-4 py-2 bg-secondary-500 hover:bg-secondary-600 text-white font-semibold rounded-lg transition-colors duration-300 shadow-md disabled:opacity-50 min-w-[120px] text-center">
+                        {isUpdatingPassword ? <LoadingSpinner size="sm" /> : 'Lưu mật khẩu'}
+                    </button>
+                </div>
+            </form>
+        </div>
+      )}
     </div>
     {cropModalState.isOpen && (
         <AvatarCropModal
