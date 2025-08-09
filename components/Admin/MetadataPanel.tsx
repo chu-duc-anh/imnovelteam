@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Story, Volume, StoryChapter } from '../../types';
 import { SelectedItem } from './StoryEditView';
 import { fileToDataUrl } from '../../utils';
@@ -11,11 +11,10 @@ interface MetadataPanelProps {
     story: Story;
     selectedItem: SelectedItem;
     onUpdateMetadata: (updates: Partial<Story | Volume | StoryChapter>) => void;
-    allStories: Story[];
     initialStoryId: string;
 }
 
-const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUpdateMetadata, allStories, initialStoryId }) => {
+const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUpdateMetadata, initialStoryId }) => {
     const [titleStatus, setTitleStatus] = useState<'idle' | 'checking' | 'available' | 'unavailable'>('idle');
     const [titleMessage, setTitleMessage] = useState<string | null>(null);
     const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,6 +29,14 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUp
     }, [story, selectedItem]);
 
     const entity = getEntity();
+
+    const entityKey = useMemo(() => {
+        if (!selectedItem) return 'none';
+        if (selectedItem.type === 'story') return 'story-root';
+        if (selectedItem.type === 'volume') return `vol-${selectedItem.id}`;
+        if (selectedItem.type === 'chapter') return `chap-${selectedItem.id}`;
+        return 'unknown';
+    }, [selectedItem]);
 
     useEffect(() => {
         setTitleStatus('idle');
@@ -93,7 +100,7 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUp
             <div className="mt-4 space-y-4">
                 <div>
                     <label htmlFor="meta-title" className={labelClasses}>Tiêu đề</label>
-                    <input id="meta-title" type="text" value={story.title} onChange={e => handleTitleChange(e.target.value)} className={inputClasses}/>
+                    <input id="meta-title" type="text" defaultValue={story.title} onBlur={e => handleTitleChange(e.target.value)} className={inputClasses}/>
                     {titleStatus !== 'idle' && (
                          <p className={`text-xs mt-1 flex items-center ${
                             titleStatus === 'available' ? 'text-green-500' : 
@@ -105,8 +112,8 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUp
                         </p>
                     )}
                 </div>
-                <div><label htmlFor="meta-author" className={labelClasses}>Tác giả</label><input id="meta-author" type="text" value={story.author} onChange={e => handleFieldChange('author', e.target.value)} className={inputClasses}/></div>
-                <div><label htmlFor="meta-translator" className={labelClasses}>Tên nhà dịch (Team dịch)</label><input id="meta-translator" type="text" value={story.translator || ''} onChange={e => handleFieldChange('translator', e.target.value)} className={inputClasses}/></div>
+                <div><label htmlFor="meta-author" className={labelClasses}>Tác giả</label><input id="meta-author" type="text" defaultValue={story.author} onBlur={e => handleFieldChange('author', e.target.value)} className={inputClasses}/></div>
+                <div><label htmlFor="meta-translator" className={labelClasses}>Tên nhà dịch (Team dịch)</label><input id="meta-translator" type="text" defaultValue={story.translator || ''} onBlur={e => handleFieldChange('translator', e.target.value)} className={inputClasses}/></div>
                 
                 <div>
                     <label className={labelClasses}>Tên khác</label>
@@ -115,15 +122,12 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUp
                             <div key={index} className="flex items-center gap-2">
                                 <input
                                     type="text"
-                                    value={title}
-                                    onChange={(e) => {
+                                    defaultValue={title}
+                                    onBlur={(e) => {
                                         const newAltTitles = [...(story.alternativeTitles || [])];
                                         newAltTitles[index] = e.target.value;
-                                        handleFieldChange('alternativeTitles', newAltTitles);
-                                    }}
-                                    onBlur={() => {
                                         // On blur, filter out any empty titles to keep the list clean
-                                        handleFieldChange('alternativeTitles', (story.alternativeTitles || []).filter(t => t.trim() !== ''));
+                                        handleFieldChange('alternativeTitles', newAltTitles.filter(t => t.trim() !== ''));
                                     }}
                                     className={`${inputClasses} flex-grow`}
                                     placeholder={`Tên khác #${index + 1}`}
@@ -169,14 +173,11 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUp
                             <div key={index} className="flex items-center gap-2">
                                 <input
                                     type="text"
-                                    value={genre}
-                                    onChange={(e) => {
+                                    defaultValue={genre}
+                                    onBlur={(e) => {
                                         const newGenres = [...(story.genres || [])];
                                         newGenres[index] = e.target.value;
-                                        handleFieldChange('genres', newGenres);
-                                    }}
-                                    onBlur={() => {
-                                        const finalGenres = (story.genres || [])
+                                        const finalGenres = newGenres
                                             .flatMap(g => g.split(',')) 
                                             .map(g => g.trim())        
                                             .filter(g => g !== '');     
@@ -219,12 +220,12 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUp
                     </div>
                 </div>
 
-                <div><label htmlFor="meta-description" className={labelClasses}>Mô tả</label><textarea id="meta-description" value={story.description} onChange={e => handleFieldChange('description', e.target.value)} className={`${inputClasses} min-h-[100px]`} /></div>
+                <div><label htmlFor="meta-description" className={labelClasses}>Mô tả</label><textarea id="meta-description" defaultValue={story.description} onBlur={e => handleFieldChange('description', e.target.value)} className={`${inputClasses} min-h-[100px]`} /></div>
                 
                 <div>
                     <label className={labelClasses}>Ảnh bìa</label>
                     {story.coverImageUrl && <img src={story.coverImageUrl} alt="cover" className="max-h-32 rounded-md my-2"/>}
-                    <input type="text" placeholder="URL hình ảnh" value={story.coverImageUrl && !story.coverImageUrl.startsWith('data:') ? story.coverImageUrl : ''} onChange={e => handleFieldChange('coverImageUrl', e.target.value)} className={inputClasses}/>
+                    <input type="text" placeholder="URL hình ảnh" defaultValue={story.coverImageUrl && !story.coverImageUrl.startsWith('data:') ? story.coverImageUrl : ''} onBlur={e => handleFieldChange('coverImageUrl', e.target.value)} className={inputClasses}/>
                     <input type="file" accept="image/*" onChange={handleCoverImageUpload} className="w-full text-xs text-primary-600 dark:text-primary-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-secondary-500 file:text-white hover:file:bg-secondary-600 mt-2"/>
                 </div>
                  <div className="grid grid-cols-2 gap-4">
@@ -254,11 +255,11 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUp
             <>
                 <h3 className="text-lg font-bold font-serif">Siêu dữ liệu tập</h3>
                 <div className="mt-4 space-y-4">
-                    <div><label className={labelClasses}>Tiêu đề</label><input type="text" value={volume.title} onChange={e => handleTitleChange(e.target.value)} className={inputClasses}/></div>
+                    <div><label className={labelClasses}>Tiêu đề</label><input type="text" defaultValue={volume.title} onBlur={e => handleTitleChange(e.target.value)} className={inputClasses}/></div>
                      <div>
                         <label className={labelClasses}>Ảnh bìa (Tùy chọn)</label>
                         {volume.coverImageUrl && <img src={volume.coverImageUrl} alt="cover" className="max-h-32 rounded-md my-2"/>}
-                        <input type="text" placeholder="URL hình ảnh" value={volume.coverImageUrl && !volume.coverImageUrl.startsWith('data:') ? volume.coverImageUrl : ''} onChange={e => handleFieldChange('coverImageUrl', e.target.value)} className={inputClasses}/>
+                        <input type="text" placeholder="URL hình ảnh" defaultValue={volume.coverImageUrl && !volume.coverImageUrl.startsWith('data:') ? volume.coverImageUrl : ''} onBlur={e => handleFieldChange('coverImageUrl', e.target.value)} className={inputClasses}/>
                         <input type="file" accept="image/*" onChange={handleCoverImageUpload} className="w-full text-xs text-primary-600 dark:text-primary-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-secondary-500 file:text-white hover:file:bg-secondary-600 mt-2"/>
                     </div>
                 </div>
@@ -274,7 +275,7 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUp
                 <h3 className="text-lg font-bold font-serif">Siêu dữ liệu chương</h3>
                 <div className="mt-4">
                     <label className={labelClasses}>Tiêu đề</label>
-                    <input type="text" value={chapter.title} onChange={e => handleTitleChange(e.target.value)} className={inputClasses}/>
+                    <input type="text" defaultValue={chapter.title} onBlur={e => handleTitleChange(e.target.value)} className={inputClasses}/>
                 </div>
             </>
         );
@@ -283,7 +284,7 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUp
     if (!entity) return <div className="p-4 text-sm text-primary-500">Chọn một mục để chỉnh sửa siêu dữ liệu của nó.</div>;
 
     return (
-        <div className="p-4 sm:p-6 h-full">
+        <div className="p-4 sm:p-6 h-full" key={entityKey}>
             {selectedItem.type === 'story' && renderStoryFields()}
             {selectedItem.type === 'volume' && renderVolumeFields()}
             {selectedItem.type === 'chapter' && renderChapterFields()}
