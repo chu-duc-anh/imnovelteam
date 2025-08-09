@@ -88,19 +88,12 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
     setError(null);
     setIsSaving(true);
     try {
-        const settingsPayload: Omit<SiteSetting, 'id'>[] = [];
-        if (lightSetting.value) {
-            settingsPayload.push({ key: 'backgroundLight', ...lightSetting });
-        }
-        if (darkSetting.value) {
-            settingsPayload.push({ key: 'backgroundDark', ...darkSetting });
-        }
-        if (authSetting.value) {
-            settingsPayload.push({ key: 'authBackground', ...authSetting, mediaType: 'image' });
-        }
-        if (musicSetting.value) {
-            settingsPayload.push({ key: 'backgroundMusic', ...musicSetting, mediaType: 'audio' });
-        }
+        const settingsPayload: Omit<SiteSetting, 'id'>[] = [
+            { key: 'backgroundLight', value: lightSetting.value, mediaType: lightSetting.mediaType },
+            { key: 'backgroundDark', value: darkSetting.value, mediaType: darkSetting.mediaType },
+            { key: 'authBackground', value: authSetting.value, mediaType: 'image' },
+            { key: 'backgroundMusic', value: musicSetting.value, mediaType: 'audio' },
+        ];
         await onSave(settingsPayload);
     } catch(err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred.');
