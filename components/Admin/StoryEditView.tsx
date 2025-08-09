@@ -14,10 +14,9 @@ interface StoryEditViewProps {
   story: Story;
   onSave: (story: Story) => Promise<void>;
   onCancel: () => void;
-  allStories: Story[];
 }
 
-const StoryEditView: React.FC<StoryEditViewProps> = ({ story: initialStory, onSave, onCancel, allStories }) => {
+const StoryEditView: React.FC<StoryEditViewProps> = ({ story: initialStory, onSave, onCancel }) => {
   const [editedStory, setEditedStory] = useState<Story>(initialStory);
   const [selectedItem, setSelectedItem] = useState<SelectedItem>({ type: 'story' });
   const [isSaving, setIsSaving] = useState(false);
@@ -176,7 +175,6 @@ const StoryEditView: React.FC<StoryEditViewProps> = ({ story: initialStory, onSa
                 story={editedStory}
                 selectedItem={selectedItem}
                 onUpdateMetadata={handleMetadataUpdate}
-                allStories={allStories}
                 initialStoryId={initialStory.id}
              />
         </div>
