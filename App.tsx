@@ -782,7 +782,7 @@ const App: React.FC = () => {
   const mainElementClass = currentView === 'mainList' ? 'lg:col-span-9' : 'col-span-12';
 
   return (
-    <div className={`min-h-full flex flex-col ${currentView === 'chat' ? 'bg-primary-100 dark:bg-primary-950' : ''}`}>
+    <div className="min-h-full flex flex-col">
       <DynamicBackground settings={siteSettings} theme={theme} />
       <BackgroundMusicPlayer musicUrl={backgroundMusicUrl} isPlaying={isMusicPlaying} />
       
