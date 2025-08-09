@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useMemo } from 'react';
 import { Story, Comment, User, Volume, StoryChapter } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -18,7 +16,7 @@ interface StoryDetailViewProps {
   comments: Comment[];
   onAddComment: (storyId: string, text: string, parentId?: string | null) => Promise<void>;
   onToggleCommentLike: (commentId: string) => void;
-  onDeleteComment: (commentId: string) => void;
+  onDeleteComment: (commentId: string, storyId: string) => void;
   onTogglePinComment: (commentId: string) => void;
   currentUser: User | null;
   onEditStory: (story: Story) => void;
@@ -354,7 +352,7 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                     comments={comments}
                     currentUser={currentUser}
                     onAddComment={(text, parentId) => onAddComment(story.id, text, parentId)}
-                    onDeleteComment={onDeleteComment}
+                    onDeleteComment={(commentId) => onDeleteComment(commentId, story.id)}
                     onToggleCommentLike={onToggleCommentLike}
                     onTogglePinComment={onTogglePinComment}
                     onLoginClick={onLoginClick}
