@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Story, User, Volume, StoryChapter, Comment, ContentBlock, ContentBlockText, ContentBlockImage, ChatThread, LeaderboardUser, SiteSetting } from './types';
 import { createText, createVolume, createChapter, createImage, DEFAULT_AVATAR_URL } from './constants';
@@ -817,7 +814,7 @@ const App: React.FC = () => {
   const mainElementClass = currentView === 'mainList' ? 'lg:col-span-9' : 'col-span-12';
 
   return (
-    <div className={`min-h-screen flex flex-col ${currentView === 'chat' ? 'bg-primary-100 dark:bg-primary-950' : ''}`}>
+    <div className={`min-h-full flex flex-col ${currentView === 'chat' ? 'bg-primary-100 dark:bg-primary-950' : ''}`}>
       <DynamicBackground settings={siteSettings} theme={theme} />
       <BackgroundMusicPlayer musicUrl={backgroundMusicUrl} isPlaying={isMusicPlaying} />
       
