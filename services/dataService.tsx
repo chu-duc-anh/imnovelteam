@@ -1,11 +1,48 @@
 
+
 import { api } from './api';
 import { Story, Comment, Volume, ContentBlock, SiteSetting } from '../types';
 
+interface GetStoriesParams {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: 'all' | 'Ongoing' | 'Completed' | 'Dropped';
+    genresInclude?: string[];
+    genresExclude?: string[];
+    creatorId?: string;
+}
+
+interface PaginatedStoriesResponse {
+    stories: Story[];
+    page: number;
+    pages: number;
+    total: number;
+}
+
+
 export const dataService = {
   // === Stories ===
-  async getStories(): Promise<Story[]> {
-    return api.get<Story[]>('/stories');
+  async getStories(params: GetStoriesParams = {}): Promise<PaginatedStoriesResponse> {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page.toString());
+    if (params.limit) query.append('limit', params.limit.toString());
+    if (params.search) query.append('search', params.search);
+    if (params.status && params.status !== 'all') query.append('status', params.status);
+    if (params.genresInclude?.length) query.append('genresInclude', params.genresInclude.join(','));
+    if (params.genresExclude?.length) query.append('genresExclude', params.genresExclude.join(','));
+    if (params.creatorId) query.append('creatorId', params.creatorId);
+
+    const queryString = query.toString();
+    return api.get<PaginatedStoriesResponse>(`/stories?${queryString}`);
+  },
+
+  async getHotStories(): Promise<Story[]> {
+    return api.get<Story[]>('/stories/hot');
+  },
+
+  async getRecentStories(): Promise<Story[]> {
+    return api.get<Story[]>('/stories/recent');
   },
   
   async checkStoryTitleAvailability(title: string, excludeId?: string): Promise<boolean> {
