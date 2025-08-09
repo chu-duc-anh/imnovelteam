@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Story, User, Volume, StoryChapter, Comment, ContentBlock, ContentBlockText, ContentBlockImage, ChatThread, LeaderboardUser, SiteSetting } from './types';
 import { createText, createVolume, createChapter, createImage, DEFAULT_AVATAR_URL } from './constants';
@@ -141,8 +143,14 @@ const App: React.FC = () => {
           genresExclude: excludeGenres,
         });
 
-        setPaginatedStories(data.stories);
-        setTotalPages(data.pages);
+        if (data && Array.isArray(data.stories)) {
+            setPaginatedStories(data.stories);
+            setTotalPages(data.pages);
+        } else {
+            console.error("Invalid paginated story data received from API:", data);
+            setPaginatedStories([]);
+            setTotalPages(1);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load stories.");
       } finally {
@@ -295,9 +303,20 @@ const App: React.FC = () => {
     if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'contractor')) return;
     setIsFetchingList(true);
     const creatorId = currentUser.role === 'admin' ? undefined : currentUser.id;
-    const { stories } = await dataService.getStories({ creatorId, limit: 1000 }); // High limit for "all"
-    setManagementStories(stories);
-    setIsFetchingList(false);
+    try {
+      const data = await dataService.getStories({ creatorId, limit: 1000 }); // High limit for "all"
+      if (data && Array.isArray(data.stories)) {
+        setManagementStories(data.stories);
+      } else {
+        console.error("Invalid story data for management view:", data);
+        setManagementStories([]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load management stories.");
+      setManagementStories([]);
+    } finally {
+      setIsFetchingList(false);
+    }
     setCurrentView('myStories');
     window.scrollTo(0, 0);
   }, [currentUser]);
@@ -305,9 +324,20 @@ const App: React.FC = () => {
   const showTeamStories = useCallback(async () => {
     if (!currentUser?.allyOf) return;
     setIsFetchingList(true);
-    const { stories } = await dataService.getStories({ creatorId: currentUser.allyOf.id, limit: 1000 });
-    setManagementStories(stories);
-    setIsFetchingList(false);
+    try {
+      const data = await dataService.getStories({ creatorId: currentUser.allyOf.id, limit: 1000 });
+      if (data && Array.isArray(data.stories)) {
+        setManagementStories(data.stories);
+      } else {
+        console.error("Invalid story data for team view:", data);
+        setManagementStories([]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load team stories.");
+      setManagementStories([]);
+    } finally {
+        setIsFetchingList(false);
+    }
     setCurrentView('teamStories');
     window.scrollTo(0, 0);
   }, [currentUser]);
@@ -453,8 +483,14 @@ const App: React.FC = () => {
         // Refetch relevant lists
         if(currentView === 'mainList') {
           const data = await dataService.getStories({ page: currentPage, limit: STORIES_PER_PAGE, search: searchTerm, status: statusFilter, genresInclude: Object.keys(genreFilter).filter(g=>genreFilter[g]==='include'), genresExclude: Object.keys(genreFilter).filter(g=>genreFilter[g]==='exclude') });
-          setPaginatedStories(data.stories);
-          setTotalPages(data.pages);
+          if (data && Array.isArray(data.stories)) {
+            setPaginatedStories(data.stories);
+            setTotalPages(data.pages);
+          } else {
+            console.error("Invalid paginated story data after delete:", data);
+            setPaginatedStories([]);
+            setTotalPages(1);
+          }
         } else if (currentView === 'myStories') {
           showMyStories();
         } else if (currentView === 'teamStories') {
