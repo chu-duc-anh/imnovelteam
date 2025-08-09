@@ -117,19 +117,19 @@ const StoryEditView: React.FC<StoryEditViewProps> = ({ story: initialStory, onSa
 
   return (
     <div className="fixed inset-0 bg-primary-100 dark:bg-primary-950 flex flex-col z-[100]">
-      <header className="flex-shrink-0 bg-white dark:bg-primary-900 border-b border-primary-200 dark:border-primary-800 p-3 flex justify-between items-center shadow-md">
-        <div className="flex items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 text-secondary-500">
+      <header className="flex-shrink-0 bg-white dark:bg-primary-900 border-b border-primary-200 dark:border-primary-800 p-3 flex flex-col sm:flex-row justify-between items-center gap-3 shadow-md">
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-grow min-w-0">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 text-secondary-500 flex-shrink-0">
                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
             </svg>
-            <div>
-              <h1 className="text-xl font-bold font-serif text-primary-800 dark:text-primary-100 truncate">
-                  Đang chỉnh sửa: {editedStory.title}
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold font-serif text-primary-800 dark:text-primary-100 truncate">
+                  Đang chỉnh sửa: {editedStory.title || 'Truyện mới'}
               </h1>
               <p className="text-xs text-primary-500">Cập nhật lần cuối: {new Date(editedStory.lastUpdated || Date.now()).toLocaleString()}</p>
             </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
           <button onClick={onCancel} className="px-4 py-2 text-sm font-semibold rounded-lg bg-primary-200 dark:bg-primary-700 hover:bg-primary-300 dark:hover:bg-primary-600 text-primary-800 dark:text-primary-100 transition-colors">
             Hủy
           </button>
