@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Comment, User } from '../types';
 import LoadingSpinner from './LoadingSpinner';
