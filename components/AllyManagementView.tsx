@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { User } from '../types';
 import { DEFAULT_AVATAR_URL } from '../constants';
 import LoadingSpinner from './LoadingSpinner';
-import { authService } from '../../services/authService';
+import { authService } from '../services/authService';
 
 interface AllyManagementViewProps {
   currentUser: User;
