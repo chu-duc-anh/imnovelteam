@@ -59,6 +59,18 @@ export const authService = {
     await api.put<void>('/users/password', { oldPassword, newPassword });
   },
 
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    return api.post<{ message: string }>('/users/forgotpassword', { email });
+  },
+
+  async resetPassword(token: string, password: string): Promise<User> {
+    const data = await api.put<LoginResponse>(`/users/resetpassword/${token}`, { password });
+    if (data.token) {
+        localStorage.setItem(AUTH_STORAGE_KEY, data.token);
+    }
+    return data.user;
+  },
+
   async updateUserRace(userId: string, newRace: string): Promise<User> {
     return await api.put<User>(`/users/profile`, { race: newRace });
   },
