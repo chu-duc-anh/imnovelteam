@@ -1,0 +1,6 @@
+{
+  "name": "IMnovel Team",
+  "description": "A web application to browse and discover fictional stories, featuring AI-generated summaries using the Gemini API. Inspired by novel translation sites, this app showcases dynamic content generation and is developed by IMnovel Team.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

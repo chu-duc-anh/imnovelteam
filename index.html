@@ -1,0 +1,339 @@
+
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMnovel Team</title>
+    <link rel="icon" type="image/jpeg" href="https://i.imgur.com/AeZt9RG.jpeg" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+          darkMode: 'class', 
+          theme: {
+            extend: {
+              fontFamily: {
+                sans: ['Inter', 'sans-serif'],
+                serif: ['Lora', 'serif'],
+              },
+              colors: {
+                // New Palette: Slate for primary, Violet for accent, Amber for highlights
+                primary: {"50":"#f8fafc","100":"#f1f5f9","200":"#e2e8f0","300":"#cbd5e1","400":"#94a3b8","500":"#64748b","600":"#475569","700":"#334155","800":"#1e293b","900":"#0f172a","950":"#020617"},
+                secondary: {"50":"#f5f3ff","100":"#ede9fe","200":"#ddd6fe","300":"#c4b5fd","400":"#a78bfa","500":"#8b5cf6","600":"#7c3aed","700":"#6d28d9","800":"#5b21b6","900":"#4c1d95","950":"#2e1065"},
+                accent: {"50":"#fffbeb","100":"#fef3c7","200":"#fde68a","300":"#fcd34d","400":"#fbbf24","500":"#f59e0b","600":"#d97706","700":"#b45309","800":"#92400e","900":"#78350f","950":"#451a03"},
+              },
+               typography: (theme) => ({
+                DEFAULT: { 
+                  css: {
+                    '--tw-prose-body': theme('colors.primary[700]'),
+                    '--tw-prose-headings': theme('colors.primary[900]'),
+                    '--tw-prose-lead': theme('colors.primary[600]'),
+                    '--tw-prose-links': theme('colors.secondary[600]'),
+                    '--tw-prose-bold': theme('colors.primary[900]'),
+                    '--tw-prose-counters': theme('colors.primary[500]'),
+                    '--tw-prose-bullets': theme('colors.primary[400]'),
+                    '--tw-prose-hr': theme('colors.primary[200]'),
+                    '--tw-prose-quotes': theme('colors.primary[900]'),
+                    '--tw-prose-quote-borders': theme('colors.primary[300]'),
+                    '--tw-prose-captions': theme('colors.primary[500]'),
+                    '--tw-prose-code': theme('colors.secondary[700]'),
+                    '--tw-prose-pre-code': theme('colors.secondary[200]'),
+                    '--tw-prose-pre-bg': theme('colors.primary[800]'),
+                    '--tw-prose-th-borders': theme('colors.primary[400]'),
+                    '--tw-prose-td-borders': theme('colors.primary[300]'),
+                     'p': { 
+                      marginTop: theme('spacing.3'), 
+                      marginBottom: theme('spacing.3'),
+                      lineHeight: theme('lineHeight.relaxed'),
+                    },
+                    'h1, h2, h3, h4': {
+                      fontFamily: theme('fontFamily.serif').join(', '),
+                      fontWeight: '700',
+                    },
+                  },
+                },
+                invert: {
+                  css: {
+                    '--tw-prose-body': theme('colors.primary[300]'),
+                    '--tw-prose-headings': theme('colors.primary[100]'),
+                    '--tw-prose-lead': theme('colors.primary[400]'),
+                    '--tw-prose-links': theme('colors.secondary[400]'),
+                    '--tw-prose-bold': theme('colors.white'),
+                    '--tw-prose-counters': theme('colors.primary[400]'),
+                    '--tw-prose-bullets': theme('colors.primary[500]'),
+                    '--tw-prose-hr': theme('colors.primary[700]'),
+                    '--tw-prose-quotes': theme('colors.primary[200]'),
+                    '--tw-prose-quote-borders': theme('colors.primary[600]'),
+                    '--tw-prose-captions': theme('colors.primary[400]'),
+                    '--tw-prose-code': theme('colors.secondary[300]'),
+                    '--tw-prose-pre-code': theme('colors.secondary[300]'),
+                    '--tw-prose-pre-bg': theme('colors.primary[800]'),
+                    '--tw-prose-th-borders': theme('colors.primary[600]'),
+                    '--tw-prose-td-borders': theme('colors.primary[700]'),
+                  },
+                },
+                sm: {
+                    css: { fontSize: '0.875rem', p: { marginTop: '1em', marginBottom: '1em' } }
+                },
+                base: {
+                    css: { fontSize: '1rem', p: { marginTop: '1.25em', marginBottom: '1.25em' } }
+                },
+                lg: {
+                    css: { fontSize: '1.125rem', p: { marginTop: '1.25em', marginBottom: '1.25em' } }
+                },
+                xl: {
+                    css: { fontSize: '1.25rem', p: { marginTop: '1.5em', marginBottom: '1.5em' } }
+                },
+                '2xl': {
+                    css: { fontSize: '1.5rem', p: { marginTop: '1.5em', marginBottom: '1.5em' } }
+                },
+                '3xl': {
+                    css: { fontSize: '1.875rem', p: { marginTop: '1.75em', marginBottom: '1.75em' } }
+                },
+                '4xl': {
+                    css: { fontSize: '2.25rem', p: { marginTop: '1.75em', marginBottom: '1.75em' } }
+                },
+              }),
+            }
+          },
+        }
+      </script>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+      <script src="https://accounts.google.com/gsi/client" async defer></script>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/react-image-crop/dist/ReactCrop.css">
+      <style>
+        :root {
+          /* Updated scrollbar colors for new theme */
+          --scrollbar-track-color-light: #f1f5f9; /* primary-100 */
+          --scrollbar-thumb-color-light: #cbd5e1; /* primary-300 */
+          --scrollbar-thumb-hover-color-light: #94a3b8; /* primary-400 */
+
+          --scrollbar-track-color-dark: #1e293b; /* primary-800 */
+          --scrollbar-thumb-color-dark: #475569; /* primary-600 */
+          --scrollbar-thumb-hover-color-dark: #64748b; /* primary-500 */
+
+          --placeholder-color-light: #64748b; /* primary-500 */
+          --placeholder-color-dark: #64748b; /* primary-500 */
+
+          /* Default to light mode variables */
+          --scrollbar-track-color: var(--scrollbar-track-color-light);
+          --scrollbar-thumb-color: var(--scrollbar-thumb-color-light);
+          --scrollbar-thumb-hover-color: var(--scrollbar-thumb-hover-color-light);
+          --placeholder-color: var(--placeholder-color-light);
+        }
+
+        html.dark {
+          --scrollbar-track-color: var(--scrollbar-track-color-dark);
+          --scrollbar-thumb-color: var(--scrollbar-thumb-color-dark);
+          --scrollbar-thumb-hover-color: var(--scrollbar-thumb-hover-color-dark);
+          --placeholder-color: var(--placeholder-color-dark);
+        }
+
+        body { 
+          font-family: 'Inter', sans-serif; 
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          position: relative;
+          z-index: 0;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--scrollbar-track-color);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb-color);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--scrollbar-thumb-hover-color);
+        }
+        html {
+            scrollbar-width: thin;
+            scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
+        }
+        
+        .content-editable[data-placeholder]:empty:before {
+            content: attr(data-placeholder);
+            color: var(--placeholder-color);
+            position: absolute;
+            left: 0.5rem; 
+            top: 0.5rem;  
+            pointer-events: none;
+            display: block;
+        }
+        .content-editable:focus {
+            outline: none;
+        }
+
+        /* Archangel Styles */
+        .archangel-profile {
+          position: relative;
+          overflow: hidden;
+          z-index: 1;
+        }
+
+        .archangel-profile::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background-image: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2670&auto=format&fit=crop'); /* Light, abstract gradient */
+          background-size: cover;
+          background-position: center;
+          opacity: 0.3;
+          z-index: -1;
+          border-radius: 1rem; /* Match parent's border-radius */
+          transition: opacity 0.5s ease-in-out;
+        }
+        
+        html.dark .archangel-profile::before {
+          opacity: 0.2;
+        }
+        
+        .archangel-text-gradient {
+            background: linear-gradient(45deg, #FFD700, #FFFACD, #F0E68C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        @keyframes archangel-glow {
+            0%, 100% { text-shadow: 0 0 5px #FFFACD, 0 0 10px #FFD700, 0 0 15px #F0E68C; }
+            50% { text-shadow: 0 0 10px #FFFACD, 0 0 20px #FFD700, 0 0 30px #F0E68C; }
+        }
+
+        .archangel-text-glow {
+            animation: archangel-glow 3s ease-in-out infinite;
+        }
+
+        .archangel-avatar-halo {
+            box-shadow: 0 0 15px 5px rgba(255, 215, 0, 0.7), 0 0 5px 2px rgba(255, 250, 205, 1);
+        }
+
+        .archangel-race-badge {
+            background: linear-gradient(45deg, #FFD700, #F0E68C);
+            color: #4A2A00;
+            box-shadow: 0 2px 10px rgba(255, 215, 0, 0.5);
+            animation: archangel-glow 3s ease-in-out infinite reverse;
+        }
+        
+        /* Annotation Tooltip Styles */
+        .annotated-text {
+            position: relative;
+            cursor: help;
+            text-decoration: none !important;
+            padding-right: 1.2em; /* Make space for the icon */
+        }
+        .annotated-text:hover::before,
+        .annotated-text:hover::after {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+        .annotated-text::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 140%;
+            left: calc(100% - 0.6em);
+            transform: translateX(-50%) translateY(10px);
+            white-space: nowrap;
+            background-color: #1e293b; /* primary-800 */
+            color: #f1f5f9; /* primary-100 */
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+            z-index: 10;
+            font-size: 0.875rem;
+            font-family: 'Inter', sans-serif;
+            pointer-events: none;
+        }
+        .annotated-text::before {
+            content: '';
+            position: absolute;
+            bottom: calc(140% - 8px);
+            left: calc(100% - 0.6em);
+            transform: translateX(-50%) translateY(10px);
+            border: 8px solid transparent;
+            border-top-color: #1e293b; /* primary-800 */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+            z-index: 9;
+            pointer-events: none;
+        }
+
+        .annotation-icon {
+            position: absolute;
+            right: 0.2em;
+            top: 50%;
+            transform: translateY(-50%);
+            display: inline-block;
+            width: 0.8em;
+            height: 0.8em;
+            background-color: currentColor;
+            -webkit-mask-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3e%3cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM13 9V3.5L18.5 9H13z'/%3e%3c/svg%3e");
+            mask-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3e%3cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM13 9V3.5L18.5 9H13z'/%3e%3c/svg%3e");
+            mask-size: contain;
+            mask-repeat: no-repeat;
+            mask-position: center;
+            pointer-events: none;
+        }
+
+
+        /* Manual Prose Size Modifiers for CDN compatibility */
+        .prose-sm { font-size: 0.875rem; }
+        .prose-base { font-size: 1rem; }
+        .prose-lg { font-size: 1.125rem; }
+        .prose-xl { font-size: 1.25rem; }
+        .prose-2xl { font-size: 1.5rem; }
+        .prose-3xl { font-size: 1.875rem; }
+        .prose-4xl { font-size: 2.25rem; }
+
+        .prose-sm p { margin-top: 1em; margin-bottom: 1em; }
+        .prose-base p { margin-top: 1.25em; margin-bottom: 1.25em; }
+        .prose-lg p { margin-top: 1.25em; margin-bottom: 1.25em; }
+        .prose-xl p { margin-top: 1.5em; margin-bottom: 1.5em; }
+        .prose-2xl p { margin-top: 1.5em; margin-bottom: 1.5em; }
+        .prose-3xl p { margin-top: 1.75em; margin-bottom: 1.75em; }
+        .prose-4xl p { margin-top: 1.75em; margin-bottom: 1.75em; }
+      </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react-image-crop": "https://esm.sh/react-image-crop@^11.0.6",
+    "@tailwindcss/typography": "https://esm.sh/@tailwindcss/typography@^0.5.13",
+    "@google/genai": "https://esm.sh/@google/genai@^1.6.0",
+    "multer": "https://esm.sh/multer@^2.0.2",
+    "multer-gridfs-storage": "https://esm.sh/multer-gridfs-storage@^5.0.2",
+    "crypto": "https://esm.sh/crypto@^1.0.1",
+    "path": "https://esm.sh/path@^0.12.7",
+    "dotenv": "https://esm.sh/dotenv@^17.2.1",
+    "express": "https://esm.sh/express@^5.1.0",
+    "cors": "https://esm.sh/cors@^2.8.5",
+    "jsonwebtoken": "https://esm.sh/jsonwebtoken@^9.0.2",
+    "bcryptjs": "https://esm.sh/bcryptjs@^3.0.2",
+    "express-async-handler": "https://esm.sh/express-async-handler@^1.2.0",
+    "mongoose": "https://esm.sh/mongoose@^8.17.1",
+    "module": "https://esm.sh/module@^1.2.5",
+    "stream": "https://esm.sh/stream@^0.0.3"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="font-sans bg-primary-100/80 text-primary-900 dark:bg-primary-950/80 dark:text-primary-200 transition-colors duration-500">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>

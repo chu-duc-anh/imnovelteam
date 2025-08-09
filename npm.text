@@ -1,0 +1,28 @@
+backend:
+npm install express
+node server.js
+npm run build
+npm start
+
+frontend:
+npm uninstall multer multer-gridfs-storage
+npm install
+npm run build
+npm run dev
+
+mongodb+srv://ducanh:HUONGHUONG00@cluster0.wa5xn1e.mongodb.net/
+
+axeavnwlbbhuvhbn
+
+
+
+
+JWT_SECRET="browncuteahihi123456789"
+API_KEY="AIzaSyBY5oqqMOiDqKcwnGzp1RC1UhCFFHTsarA"
+
+EMAIL_USER=chuducanh4511@gmail.com
+EMAIL_PASS=axeavnwlbbhuvhbn
+PORT=5000
+
+
+
