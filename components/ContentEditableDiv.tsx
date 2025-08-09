@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useCallback } from 'react';
 
 interface ContentEditableDivProps {
@@ -24,27 +23,34 @@ const ContentEditableDiv: React.FC<ContentEditableDivProps> = ({
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // This effect synchronizes the div's content with the 'html' prop.
-  // It's crucial for external updates (like loading initial data or reverting changes).
-  // The check prevents resetting the content if the change originated from user input, which is the key to fixing the cursor jump.
+  // Effect to sync the DOM with the `html` prop from state.
+  // This is the "controlled" part of the component and the single source of truth
+  // for setting the content from outside the component.
   useEffect(() => {
     if (contentRef.current && html !== contentRef.current.innerHTML) {
       contentRef.current.innerHTML = html;
     }
   }, [html]);
   
-  // We removed the `lastHtml` ref for simplicity. Firing onChange on every input
-  // is standard for controlled-like components, and the `useEffect` guard is sufficient
-  // to prevent re-render cycles from causing issues.
-  const emitChange = useCallback(() => {
+  // onInput is the standard event for contentEditable changes (typing, pasting, etc.)
+  const handleInput = useCallback(() => {
     if (contentRef.current) {
       const newHtml = contentRef.current.innerHTML;
-      onChange(newHtml);
+      if (html !== newHtml) { // Only call onChange if content is actually different
+        onChange(newHtml);
+      }
     }
-  }, [onChange]);
+  }, [onChange, html]);
 
+  // onBlur is a good fallback for final cleanup/sync, e.g., after pasting.
   const handleBlur = () => {
-    emitChange(); 
+    if (contentRef.current) {
+        const newHtml = contentRef.current.innerHTML;
+        // A final check to ensure state is synchronized.
+        if (html !== newHtml) {
+            onChange(newHtml);
+        }
+    }
     if (customOnBlur) {
       customOnBlur();
     }
@@ -52,9 +58,9 @@ const ContentEditableDiv: React.FC<ContentEditableDivProps> = ({
 
   const isEmptyPlaceholder = html === '<p><br></p>' || html === '' || html === '<p></p>';
 
-  // By removing dangerouslySetInnerHTML, we give full control of the inner DOM to the user
-  // and our useEffect hook. React will no longer try to diff and replace the content,
-  // which was the cause of the cursor jumping.
+  // We DO NOT use dangerouslySetInnerHTML. The content is now managed imperatively
+  // by the useEffect hook, which is the correct pattern for integrating with non-React
+  // DOM mutation patterns like contentEditable.
   return (
     <div
       id={id}
@@ -66,6 +72,7 @@ const ContentEditableDiv: React.FC<ContentEditableDivProps> = ({
                   focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500 
                   transition-colors duration-300`}
       contentEditable={true}
+      onInput={handleInput}
       onFocus={onFocus}
       onBlur={handleBlur} 
       aria-label={ariaLabel || 'Editable content area'}
@@ -75,7 +82,6 @@ const ContentEditableDiv: React.FC<ContentEditableDivProps> = ({
           position: 'relative',
         } : {})
       }}
-      dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 };
