@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SiteSetting } from '../types';
 import { toAbsoluteUrl } from '../utils';
 
@@ -14,6 +14,7 @@ const DEFAULT_BG_DARK = 'https://images.unsplash.com/photo-1532188438641-863a117
 
 const BackgroundLayer: React.FC<{ url: string; mediaType: 'image' | 'video'; active: boolean; }> = React.memo(({ url, mediaType, active }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const commonClasses = "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out";
 
   const handleLoad = () => setIsLoaded(true);
@@ -22,6 +23,16 @@ const BackgroundLayer: React.FC<{ url: string; mediaType: 'image' | 'video'; act
   useEffect(() => {
     setIsLoaded(false);
   }, [url]);
+
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (active && videoElement) {
+      videoElement.play().catch(error => {
+        console.warn("Background video autoplay was prevented:", error);
+      });
+    }
+  }, [active, url]);
+
 
   return (
     <>
@@ -35,6 +46,7 @@ const BackgroundLayer: React.FC<{ url: string; mediaType: 'image' | 'video'; act
         />
       ) : (
         <video
+          ref={videoRef}
           key={url} // Use key to force re-render when src changes
           src={url}
           onCanPlay={handleLoad}
