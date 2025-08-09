@@ -122,20 +122,18 @@ const UserManagementView: React.FC<UserManagementViewProps> = ({
                  {user.allyOfUsername && <p className="text-xs text-amber-600 dark:text-amber-400">Ally of: {user.allyOfUsername}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center text-xs mb-4 border-y border-primary-200 dark:border-primary-700 py-3">
-              <div>
-                <p className="font-bold text-primary-500 dark:text-primary-400 uppercase tracking-wider">Role</p>
-                <span className={`mt-1 px-2.5 py-0.5 inline-flex text-xs leading-5 font-bold rounded-full ${getRoleClasses(user.role)}`}>
-                  {user.role}
-                </span>
+            <div className="space-y-2 text-sm mb-4 border-y border-primary-200 dark:border-primary-700 py-3">
+               <div className="flex justify-between items-center">
+                <p className="font-bold text-primary-500 dark:text-primary-400">Role</p>
+                <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-bold rounded-full ${getRoleClasses(user.role)}`}>{user.role}</span>
               </div>
-              <div>
-                <p className="font-bold text-primary-500 dark:text-primary-400 uppercase tracking-wider">Race</p>
-                <p className="text-primary-800 dark:text-primary-200 mt-1 font-medium">{user.race || 'N/A'}</p>
+              <div className="flex justify-between items-center">
+                <p className="font-bold text-primary-500 dark:text-primary-400">Race</p>
+                <p className="text-primary-800 dark:text-primary-200 font-medium">{user.race || 'N/A'}</p>
               </div>
-              <div>
-                <p className="font-bold text-primary-500 dark:text-primary-400 uppercase tracking-wider">Comments</p>
-                <p className="text-primary-800 dark:text-primary-200 mt-1 font-medium">{commentCounts.get(user.id) || 0}</p>
+              <div className="flex justify-between items-center">
+                <p className="font-bold text-primary-500 dark:text-primary-400">Comments</p>
+                <p className="text-primary-800 dark:text-primary-200 font-medium">{commentCounts.get(user.id) || 0}</p>
               </div>
             </div>
             <div className="flex justify-end items-center space-x-3 text-sm">
