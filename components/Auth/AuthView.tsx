@@ -1,10 +1,14 @@
 
 
 
+
+
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import LoadingSpinner from '../LoadingSpinner';
 import { authService } from '../../services/authService';
 import { User, SiteSetting } from '../../types';
+import { toAbsoluteUrl } from '../../utils';
 
 interface AuthViewProps {
   initialMode: 'login' | 'register' | 'forgot' | 'reset';
@@ -44,7 +48,8 @@ const AuthView: React.FC<AuthViewProps> = ({ initialMode, resetToken, onBack, on
 
   const authBackgroundUrl = useMemo(() => {
     const setting = siteSettings.find(s => s.key === 'authBackground');
-    return setting?.value || 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?q=80&w=2670&auto=format&fit=crop';
+    const url = setting?.value || 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?q=80&w=2670&auto=format&fit=crop';
+    return toAbsoluteUrl(url);
   }, [siteSettings]);
 
   useEffect(() => { 
