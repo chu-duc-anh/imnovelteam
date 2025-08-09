@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { SiteSetting } from '../../types';
 import { fileService } from '../../services/fileService';
 import { toAbsoluteUrl } from '../../utils';
@@ -109,26 +109,38 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
     }
   };
 
-  const BackgroundPreview: React.FC<{ setting: LocalSetting, title: string, uploadingKey: string }> = ({ setting, title, uploadingKey }) => (
-    <div className="relative w-full aspect-video bg-primary-200 dark:bg-primary-800 rounded-lg overflow-hidden shadow-inner">
-      {uploading === uploadingKey && (
-          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center z-10">
-              <LoadingSpinner message="Uploading..." />
-          </div>
-      )}
-      {setting.value ? (
-        setting.mediaType === 'image' ? (
-          <img src={toAbsoluteUrl(setting.value)} alt={`${title} preview`} className="w-full h-full object-cover" />
+  const BackgroundPreview: React.FC<{ setting: LocalSetting, title: string, uploadingKey: string }> = ({ setting, title, uploadingKey }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.play().catch(error => {
+                console.warn("Preview video autoplay was prevented:", error);
+            });
+        }
+    }, [setting.value]);
+    
+    return (
+        <div className="relative w-full aspect-video bg-primary-200 dark:bg-primary-800 rounded-lg overflow-hidden shadow-inner">
+        {uploading === uploadingKey && (
+            <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center z-10">
+                <LoadingSpinner message="Uploading..." />
+            </div>
+        )}
+        {setting.value ? (
+            setting.mediaType === 'image' ? (
+            <img src={toAbsoluteUrl(setting.value)} alt={`${title} preview`} className="w-full h-full object-cover" />
+            ) : (
+            <video ref={videoRef} key={toAbsoluteUrl(setting.value)} src={toAbsoluteUrl(setting.value)} muted loop autoPlay playsInline className="w-full h-full object-cover" />
+            )
         ) : (
-          <video key={toAbsoluteUrl(setting.value)} src={toAbsoluteUrl(setting.value)} muted loop autoPlay playsInline className="w-full h-full object-cover" />
-        )
-      ) : (
-        <div className="flex items-center justify-center h-full text-primary-500 text-sm">No background set</div>
-      )}
-      <div className="absolute inset-0 bg-black/20"></div>
-      <h4 className="absolute bottom-2 left-3 text-white font-bold text-lg drop-shadow-md">{title}</h4>
-    </div>
-  );
+            <div className="flex items-center justify-center h-full text-primary-500 text-sm">No background set</div>
+        )}
+        <div className="absolute inset-0 bg-black/20"></div>
+        <h4 className="absolute bottom-2 left-3 text-white font-bold text-lg drop-shadow-md">{title}</h4>
+        </div>
+    );
+  };
 
   return (
     <div className="max-w-4xl mx-auto my-8 p-4 sm:p-6 md:p-8 bg-primary-100/95 dark:bg-primary-950/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-primary-200/50 dark:border-primary-800/50">
