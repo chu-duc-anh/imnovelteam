@@ -1,8 +1,9 @@
 
+
 import React, { useMemo } from 'react';
 import { Story, User } from '../types';
 import RelativeTime from './RelativeTime';
-import { generateFakeStoryStats } from '../utils';
+import { generateFakeStoryStats, toAbsoluteUrl } from '../utils';
 
 interface StoryCardProps {
   story: Story;
@@ -84,7 +85,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
           <div className="w-full sm:w-48 flex-shrink-0">
             <div className="relative cursor-pointer aspect-[3/4]" onClick={() => onSelectStory(story)}>
               <img 
-                src={story.coverImageUrl} 
+                src={toAbsoluteUrl(story.coverImageUrl)} 
                 alt={`Cover for ${story.title}`}
                 className="absolute inset-0 w-full h-full object-cover rounded-md shadow-lg" 
                 loading="lazy"
@@ -181,7 +182,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
         aria-label={`View details for ${story.title}`}
       >
         <img 
-            src={story.coverImageUrl} 
+            src={toAbsoluteUrl(story.coverImageUrl)} 
             alt={`Cover for ${story.title}`} 
             className={`w-full ${imgHeightClass} object-cover transition-transform duration-500 ease-in-out group-hover:scale-110`} 
             loading="lazy"
