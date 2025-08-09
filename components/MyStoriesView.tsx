@@ -5,7 +5,7 @@ import { Story, User } from '../types';
 import StoryCard from './StoryCard';
 
 interface MyStoriesViewProps {
-  allStories: Story[];
+  stories: Story[];
   currentUser: User;
   onAddNewStory: () => void;
   onEditStory: (story: Story) => void;
@@ -15,7 +15,7 @@ interface MyStoriesViewProps {
 }
 
 const MyStoriesView: React.FC<MyStoriesViewProps> = ({
-  allStories,
+  stories,
   currentUser,
   onAddNewStory,
   onEditStory,
@@ -23,12 +23,6 @@ const MyStoriesView: React.FC<MyStoriesViewProps> = ({
   onBack,
   onSelectStory
 }) => {
-  const myStories = useMemo(() => {
-    if (currentUser.role === 'admin') {
-      return allStories; // Admins see all stories in their management view
-    }
-    return allStories.filter(story => story.creatorId?.id === currentUser.id);
-  }, [allStories, currentUser]);
 
   const title = currentUser.role === 'admin' ? 'Quản lý tất cả truyện' : 'Dịch truyện của bạn';
 
@@ -61,14 +55,14 @@ const MyStoriesView: React.FC<MyStoriesViewProps> = ({
         </button>
       </div>
 
-       {myStories.length === 0 ? (
+       {stories.length === 0 ? (
          <div className="text-center text-primary-600 dark:text-primary-400 py-16 px-6 bg-white/50 dark:bg-primary-900/50 rounded-xl">
             <h3 className="font-serif text-2xl font-bold mb-2">Không tìm thấy truyện nào</h3>
             <p>Bạn chưa tạo truyện nào. Hãy bắt đầu bằng cách thêm một truyện mới!</p>
          </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
-          {myStories.map((story) => (
+          {stories.map((story) => (
             <StoryCard 
               key={story.id} 
               story={story} 
