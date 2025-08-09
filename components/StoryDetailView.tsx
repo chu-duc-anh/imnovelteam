@@ -140,7 +140,7 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
   }
 
   const StatItem = ({ icon, value, label }: { icon: React.ReactNode, value: string | number, label: string }) => (
-    <div className="flex flex-col items-center justify-center text-center px-2 flex-1">
+    <div className="flex flex-col items-center justify-center text-center p-2 flex-1 min-w-[120px]">
         <div className="mb-2">{icon}</div>
         <p className="text-xl font-bold text-primary-900 dark:text-primary-100">{value}</p>
         <p className="text-xs text-primary-500 dark:text-primary-400 uppercase tracking-wider mt-1">{label}</p>
@@ -148,7 +148,7 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
   );
   
   const StatButton = ({ icon, value, label, valueClass = '', onClick, disabled = false }: { icon: React.ReactNode, value: string | number, label: string, valueClass?: string, onClick: () => void, disabled?: boolean }) => (
-    <button onClick={onClick} disabled={disabled} className="flex flex-col items-center justify-center text-center px-2 flex-1 group transition-transform duration-200 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60">
+    <button onClick={onClick} disabled={disabled} className="flex flex-col items-center justify-center text-center p-2 flex-1 min-w-[120px] group transition-transform duration-200 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60">
         <div className={`mb-2 transition-transform duration-200 group-hover:scale-110 ${valueClass}`}>{icon}</div>
         <p className="text-xl font-bold text-primary-900 dark:text-primary-100">{value}</p>
         <p className="text-xs text-primary-500 dark:text-primary-400 uppercase tracking-wider mt-1">{label}</p>
@@ -214,7 +214,7 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                 </div>
 
                 <div className="md:col-span-8 lg:col-span-9">
-                    <h1 className="font-serif text-4xl lg:text-5xl font-bold text-primary-900 dark:text-primary-100 mb-2">{story.title}</h1>
+                    <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-900 dark:text-primary-100 mb-2">{story.title}</h1>
                     <div className="space-y-1 text-lg text-primary-600 dark:text-primary-400 mb-4">
                         <p>Tác giả: <span className="font-semibold text-primary-800 dark:text-primary-300">{story.author}</span></p>
                         {story.translator && (
@@ -223,7 +223,7 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                     </div>
                     
                     <div className="my-6">
-                        <h4 className="font-semibold text-primary-700 dark:text-primary-300 mb-2 text-sm uppercase tracking-wider">Genres</h4>
+                        <h4 className="font-semibold text-primary-700 dark:text-primary-300 mb-2 text-sm uppercase tracking-wider">THỂ LOẠI</h4>
                         <div className="flex flex-wrap gap-2">
                         {story.genres.map((genre) => (
                             <span key={genre} className="bg-primary-200 dark:bg-primary-700 text-primary-700 dark:text-primary-200 px-3 py-1 rounded-full text-sm font-medium shadow-sm">
@@ -254,8 +254,8 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
             </div>
 
             {/* --- Redesigned Stats and Actions Bar --- */}
-             <div className="my-8 p-6 rounded-2xl bg-gradient-to-r from-primary-50 via-slate-50 to-purple-50 dark:from-primary-900/50 dark:via-slate-900/60 dark:to-purple-900/50 shadow-inner">
-                <div className="flex flex-row justify-around items-center divide-x divide-primary-200/60 dark:divide-primary-700/60">
+             <div className="my-8 p-4 sm:p-6 rounded-2xl bg-gradient-to-r from-primary-50 via-slate-50 to-purple-50 dark:from-primary-900/50 dark:via-slate-900/60 dark:to-purple-900/50 shadow-inner">
+                <div className="flex flex-row flex-wrap justify-around items-center -m-2">
                      <StatItem 
                         icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>}
                         value={displayViews.toLocaleString('en-US')}
