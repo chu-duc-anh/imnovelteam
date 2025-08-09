@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { SiteSetting } from '../types';
 import { toAbsoluteUrl } from '../utils';
@@ -8,9 +6,6 @@ interface DynamicBackgroundProps {
   settings: SiteSetting[];
   theme: 'light' | 'dark';
 }
-
-const DEFAULT_BG_LIGHT = 'https://images.unsplash.com/photo-1500964757637-c85e8a162699?q=80&w=3003&auto=format&fit=crop';
-const DEFAULT_BG_DARK = 'https://images.unsplash.com/photo-1532188438641-863a1171a74d?q=80&w=2938&auto=format&fit=crop';
 
 const BackgroundLayer: React.FC<{ url: string; mediaType: 'image' | 'video'; active: boolean; }> = React.memo(({ url, mediaType, active }) => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -66,22 +61,20 @@ const DynamicBackground: React.FC<DynamicBackgroundProps> = ({ settings, theme }
   const bgLightSetting = settings.find(s => s.key === 'backgroundLight');
   const bgDarkSetting = settings.find(s => s.key === 'backgroundDark');
 
-  const lightUrl = toAbsoluteUrl(bgLightSetting?.value) || DEFAULT_BG_LIGHT;
-  let lightType: 'image' | 'video' = 'image';
-  if (bgLightSetting && (bgLightSetting.mediaType === 'image' || bgLightSetting.mediaType === 'video')) {
-    lightType = bgLightSetting.mediaType;
-  }
+  const lightUrl = toAbsoluteUrl(bgLightSetting?.value) || null;
+  const lightType = bgLightSetting?.mediaType === 'video' ? 'video' : 'image';
 
-  const darkUrl = toAbsoluteUrl(bgDarkSetting?.value) || DEFAULT_BG_DARK;
-  let darkType: 'image' | 'video' = 'image';
-  if (bgDarkSetting && (bgDarkSetting.mediaType === 'image' || bgDarkSetting.mediaType === 'video')) {
-    darkType = bgDarkSetting.mediaType;
-  }
+  const darkUrl = toAbsoluteUrl(bgDarkSetting?.value) || null;
+  const darkType = bgDarkSetting?.mediaType === 'video' ? 'video' : 'image';
+
+  // Determine the solid color fallback which is always present
+  const fallbackBgColor = theme === 'light' ? 'bg-white' : 'bg-black';
 
   return (
-    <div className="fixed inset-0 w-screen h-screen -z-10 overflow-hidden bg-black" aria-hidden="true">
-        <BackgroundLayer url={lightUrl} mediaType={lightType} active={theme === 'light'} />
-        <BackgroundLayer url={darkUrl} mediaType={darkType} active={theme === 'dark'} />
+    <div className={`fixed inset-0 w-screen h-screen -z-10 overflow-hidden transition-colors duration-1000 ${fallbackBgColor}`} aria-hidden="true">
+      {/* Only render layers if they have a URL */}
+      {lightUrl && <BackgroundLayer url={lightUrl} mediaType={lightType} active={theme === 'light'} />}
+      {darkUrl && <BackgroundLayer url={darkUrl} mediaType={darkType} active={theme === 'dark'} />}
     </div>
   );
 };
