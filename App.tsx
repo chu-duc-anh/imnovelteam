@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Story, User, Volume, StoryChapter, Comment, ContentBlock, ContentBlockText, ContentBlockImage, ChatThread, LeaderboardUser, SiteSetting } from './types';
 import { createText, createVolume, createChapter, createImage, DEFAULT_AVATAR_URL } from './constants';
@@ -771,7 +772,7 @@ const App: React.FC = () => {
       case 'siteSettings': return currentUser?.role === 'admin' ? <SiteSettingsView initialSettings={siteSettings} onSave={handleSaveSiteSettings} onBack={showMainList} onShowBackgroundPreview={handleShowBackgroundPreview} /> : (showMainList(), null);
       case 'backgroundPreview': return <BackgroundPreviewView onBack={() => setCurrentView(previousView)} theme={theme} onToggleTheme={toggleTheme} />;
       case 'auth': return <AuthView {...authViewProps} onBack={showMainList} onLoginSuccess={handleAuthSuccess} onRegisterSuccess={handleRegisterSuccess} siteSettings={siteSettings} />;
-      case 'storyEdit': return storyInEditSession ? <StoryEditView story={storyInEditSession} onSave={handleSaveEditedStory} onCancel={handleCancelEditSession} allStories={paginatedStories} /> : (showMainList(), null);
+      case 'storyEdit': return storyInEditSession ? <StoryEditView story={storyInEditSession} onSave={handleSaveEditedStory} onCancel={handleCancelEditSession} /> : (showMainList(), null);
       default: return null;
     }
   };
