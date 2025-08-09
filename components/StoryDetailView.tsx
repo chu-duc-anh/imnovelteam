@@ -1,11 +1,12 @@
 
 
+
 import React, { useState, useMemo } from 'react';
 import { Story, Comment, User, Volume, StoryChapter } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import CommentSection from './CommentSection';
 import RatingModal from './RatingModal';
-import { countWordsInContentBlocks, generateFakeStoryStats } from '../utils';
+import { countWordsInContentBlocks, generateFakeStoryStats, toAbsoluteUrl } from '../utils';
 import RelativeTime from './RelativeTime';
 
 interface StoryDetailViewProps {
@@ -187,7 +188,7 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
             <div className="md:grid md:grid-cols-12 md:gap-8 lg:gap-12">
                 <div className="md:col-span-4 lg:col-span-3 mb-8 md:mb-0">
                     <img 
-                        src={story.coverImageUrl} 
+                        src={toAbsoluteUrl(story.coverImageUrl)} 
                         alt={`Cover for ${story.title}`} 
                         className="w-full h-auto object-cover rounded-xl shadow-2xl aspect-[2/3] border-2 border-primary-200 dark:border-primary-800"
                         loading="lazy"
