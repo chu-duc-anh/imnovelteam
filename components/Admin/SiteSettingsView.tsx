@@ -146,8 +146,8 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
             {/* Background Music */}
             <div className="p-4 rounded-lg border border-primary-200 dark:border-primary-700/50">
                 <h2 className="text-xl font-semibold font-serif text-primary-800 dark:text-primary-200 mb-4">Nhạc Nền</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                     <div className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center gap-8">
+                     <div className="space-y-4 md:w-1/2">
                         {uploading === 'backgroundMusic' ? (
                              <div className="flex items-center justify-center h-full text-primary-500 text-sm"><LoadingSpinner message="Uploading..." /></div>
                         ) : fullMusicUrl ? (
@@ -156,7 +156,7 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
                              <div className="flex items-center justify-center h-full text-primary-500 text-sm">No music set</div>
                         )}
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-4 md:w-1/2">
                         <div>
                             <label htmlFor="music-url" className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">URL Nhạc (mp3, wav, etc.)</label>
                             <input id="music-url" type="text" value={musicSetting.value} onChange={(e) => handleUrlChange(e, setMusicSetting)} placeholder="https://example.com/music.mp3" className="w-full p-2 bg-primary-100 dark:bg-primary-800/80 border border-primary-300 dark:border-primary-700 rounded-md shadow-sm focus:ring-secondary-500 focus:border-secondary-500" />
@@ -172,11 +172,11 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
             {/* Auth Page Background */}
             <div className="p-4 rounded-lg border border-primary-200 dark:border-primary-700/50">
                 <h2 className="text-xl font-semibold font-serif text-primary-800 dark:text-primary-200 mb-4">Nền Trang Xác thực</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                     <div className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-start gap-8">
+                     <div className="space-y-4 md:w-1/2">
                         <BackgroundPreview setting={authSetting} title="Nền Đăng nhập/Đăng ký" uploadingKey="authBackground" />
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-4 md:w-1/2">
                         <div>
                             <label htmlFor="auth-url" className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">URL Nền (Chỉ hình ảnh)</label>
                             <input id="auth-url" type="text" value={authSetting.value} onChange={(e) => handleUrlChange(e, setAuthSetting)} placeholder="https://example.com/image.jpg" className="w-full p-2 bg-primary-100 dark:bg-primary-800/80 border border-primary-300 dark:border-primary-700 rounded-md shadow-sm focus:ring-secondary-500 focus:border-secondary-500" />
@@ -192,7 +192,7 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
             {/* Site Backgrounds */}
             <div className="p-4 rounded-lg border border-primary-200 dark:border-primary-700/50">
                 <h2 className="text-xl font-semibold font-serif text-primary-800 dark:text-primary-200 mb-4">Nền Trang web Chính</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Light Mode Settings */}
                     <div className="space-y-4">
                         <BackgroundPreview setting={lightSetting} title="Chế độ Sáng" uploadingKey="backgroundLight" />
