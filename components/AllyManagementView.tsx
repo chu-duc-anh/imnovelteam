@@ -1,26 +1,39 @@
 
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { User } from '../types';
 import { DEFAULT_AVATAR_URL } from '../constants';
 import LoadingSpinner from './LoadingSpinner';
+import { authService } from '../../services/authService';
 
 interface AllyManagementViewProps {
   currentUser: User;
-  allUsers: User[];
-  onManageAlly: (action: 'add' | 'remove', allyUsername: string) => Promise<void>;
   onBack: () => void;
 }
 
 const AllyManagementView: React.FC<AllyManagementViewProps> = ({
   currentUser,
-  allUsers,
-  onManageAlly,
   onBack,
 }) => {
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingState, setLoadingState] = useState<{ [key: string]: boolean }>({});
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+        setIsLoading(true);
+        try {
+            const users = await authService.getAllUsers();
+            setAllUsers(users);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to load users.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchUsers();
+  }, []);
 
   const myAllies = useMemo(() => {
     return allUsers.filter(user => user.allyOf?.id === currentUser.id);
@@ -35,17 +48,28 @@ const AllyManagementView: React.FC<AllyManagementViewProps> = ({
     );
   }, [searchTerm, allUsers]);
 
-  const handleAction = async (action: 'add' | 'remove', username: string) => {
-    setLoadingState(prev => ({ ...prev, [username]: true }));
+  const onManageAlly = async (action: 'add' | 'remove', allyUsername: string) => {
+    setLoadingState(prev => ({ ...prev, [allyUsername]: true }));
     setError(null);
     try {
-      await onManageAlly(action, username);
+      await authService.manageAlly(action, allyUsername);
+      // Refetch users to get the latest state
+      const updatedUsers = await authService.getAllUsers();
+      setAllUsers(updatedUsers);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred.');
     } finally {
-      setLoadingState(prev => ({ ...prev, [username]: false }));
+      setLoadingState(prev => ({ ...prev, [allyUsername]: false }));
     }
   };
+
+  if (isLoading) {
+    return (
+        <div className="flex items-center justify-center h-96">
+            <LoadingSpinner size="lg" message="Loading user data..."/>
+        </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto my-8 p-4 sm:p-6 md:p-8 bg-primary-100/95 dark:bg-primary-950/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-primary-200/50 dark:border-primary-800/50">
@@ -74,7 +98,7 @@ const AllyManagementView: React.FC<AllyManagementViewProps> = ({
                   </div>
                 </div>
                 <button
-                  onClick={() => handleAction('remove', ally.username)}
+                  onClick={() => onManageAlly('remove', ally.username)}
                   disabled={loadingState[ally.username]}
                   className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-100 hover:bg-red-200 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30 rounded-full transition-colors disabled:opacity-50"
                 >
@@ -110,7 +134,7 @@ const AllyManagementView: React.FC<AllyManagementViewProps> = ({
                     <p className="font-medium text-sm text-primary-800 dark:text-primary-200">{user.username}</p>
                   </div>
                    <button
-                     onClick={() => handleAction('add', user.username)}
+                     onClick={() => onManageAlly('add', user.username)}
                      disabled={loadingState[user.username]}
                      className="px-3 py-1.5 text-xs font-semibold text-green-600 bg-green-100 hover:bg-green-200 dark:bg-green-500/20 dark:text-green-300 dark:hover:bg-green-500/30 rounded-full transition-colors disabled:opacity-50"
                     >
