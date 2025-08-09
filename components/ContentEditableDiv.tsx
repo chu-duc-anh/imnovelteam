@@ -66,7 +66,6 @@ const ContentEditableDiv: React.FC<ContentEditableDivProps> = ({
                   focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500 
                   transition-colors duration-300`}
       contentEditable={true}
-      onInput={emitChange}
       onFocus={onFocus}
       onBlur={handleBlur} 
       aria-label={ariaLabel || 'Editable content area'}
@@ -76,6 +75,7 @@ const ContentEditableDiv: React.FC<ContentEditableDivProps> = ({
           position: 'relative',
         } : {})
       }}
+      dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 };
