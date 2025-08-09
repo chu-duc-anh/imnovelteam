@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Story, Volume, StoryChapter, User, ContentBlock, ContentBlockText, ContentBlockImage, Comment } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -14,7 +15,7 @@ interface ChapterViewProps {
   onGoToStoryDetail: (storyId: string, volumeId: string | null) => void;
   currentUser: User | null;
   onAddComment: (storyId: string, text: string, parentId: string | null, chapterId: string | null) => Promise<void>;
-  onDeleteComment: (commentId: string) => void;
+  onDeleteComment: (commentId: string, storyId: string) => void;
   onToggleCommentLike: (commentId: string) => void;
   onTogglePinComment: (commentId: string) => void;
   onLoginClick: () => void;
@@ -210,7 +211,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
               comments={comments}
               currentUser={currentUser}
               onAddComment={(text, parentId) => onAddComment(story.id, text, parentId, chapter.id)}
-              onDeleteComment={onDeleteComment}
+              onDeleteComment={(commentId) => onDeleteComment(commentId, story.id)}
               onToggleCommentLike={onToggleCommentLike}
               onTogglePinComment={onTogglePinComment}
               onLoginClick={onLoginClick}
