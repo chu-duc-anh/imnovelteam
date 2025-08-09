@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Story, User, Volume, StoryChapter, Comment, ContentBlock, ContentBlockText, ContentBlockImage, ChatThread, LeaderboardUser, SiteSetting } from './types';
 import { createText, createVolume, createChapter, createImage, DEFAULT_AVATAR_URL } from './constants';
@@ -39,7 +40,7 @@ const STORIES_PER_PAGE = 8;
 const REFETCH_INTERVAL = 3600 * 1000; // 1 hour in milliseconds
 
 type View = 'mainList' | 'storyDetail' | 'chapterView' | 'userProfile' | 'userManagement' | 'chat' | 'auth' | 'storyEdit' | 'myStories' | 'allyManagement' | 'teamStories' | 'siteSettings' | 'backgroundPreview';
-type AuthMode = 'login' | 'register';
+type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
 type Theme = 'light' | 'dark';
 type StatusFilter = 'all' | 'Ongoing' | 'Completed' | 'Dropped';
 
@@ -76,7 +77,7 @@ const App: React.FC = () => {
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  const [authInitialMode, setAuthInitialMode] = useState<AuthMode>('login');
+  const [authViewProps, setAuthViewProps] = useState({ initialMode: 'login' as AuthMode, resetToken: null as string | null });
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   const [storyInEditSession, setStoryInEditSession] = useState<Story | null>(null);
@@ -134,6 +135,14 @@ const App: React.FC = () => {
       setCurrentUser(user);
       await fetchAllData(user);
       setIsLoadingInitial(false);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('resetToken');
+      if (token) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setAuthViewProps({ initialMode: 'reset', resetToken: token });
+          setCurrentView('auth');
+      }
     }
 
     checkAuthAndFetchData();
@@ -245,12 +254,19 @@ const App: React.FC = () => {
      setCurrentUser(user);
      await fetchAllData(user);
      setCurrentView('mainList');
+     setAuthViewProps({ initialMode: 'login', resetToken: null });
   };
   
-  const handleRegisterSuccess = (user: User) => {}
+  const handleRegisterSuccess = (user: User) => {
+     setInfoModal({
+        isOpen: true,
+        title: "Registration Successful!",
+        message: "Your account has been created. Please log in to continue.",
+     });
+  }
   
-  const showAuthView = (mode: AuthMode) => {
-    setAuthInitialMode(mode);
+  const showAuthView = (mode: 'login' | 'register') => {
+    setAuthViewProps({ initialMode: mode, resetToken: null });
     setCurrentView('auth');
   };
   
@@ -491,7 +507,7 @@ const App: React.FC = () => {
     } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update bookmark.");
     }
-  }, [currentUser, showAuthView, selectedStory?.id]);
+  }, [currentUser, selectedStory?.id]);
 
   const handleToggleStoryLike = useCallback(async (storyId: string) => {
     if (!currentUser) { showAuthView('login'); return; }
@@ -504,7 +520,7 @@ const App: React.FC = () => {
     } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update like status.");
     }
-  }, [currentUser, showAuthView, selectedStory?.id]);
+  }, [currentUser, selectedStory?.id]);
 
   const handleRateStory = useCallback(async (storyId: string, score: number) => {
     if (!currentUser) { showAuthView('login'); return; }
@@ -519,7 +535,7 @@ const App: React.FC = () => {
         setError(err instanceof Error ? err.message : "Failed to submit rating.");
         throw err;
     }
-  }, [currentUser, showAuthView, selectedStory?.id]);
+  }, [currentUser, selectedStory?.id]);
   
   const handleSendMessage = async (text: string, receiverId: string) => {
     if (!currentUser) throw new Error("User not logged in.");
@@ -776,7 +792,7 @@ const App: React.FC = () => {
       case 'chat': return currentUser ? <ChatView currentUser={currentUser} chatThreads={chatThreads} onSendMessage={handleSendMessage} onMarkMessagesAsRead={handleMarkMessagesAsRead} onDeleteThread={handleDeleteThread} onBack={handleBackFromChat}/> : (showMainList(), null);
       case 'siteSettings': return currentUser?.role === 'admin' ? <SiteSettingsView initialSettings={siteSettings} onSave={handleSaveSiteSettings} onBack={showMainList} onShowBackgroundPreview={handleShowBackgroundPreview} /> : (showMainList(), null);
       case 'backgroundPreview': return <BackgroundPreviewView onBack={() => setCurrentView(previousView)} theme={theme} onToggleTheme={toggleTheme} />;
-      case 'auth': return <AuthView initialMode={authInitialMode} onBack={showMainList} onLoginSuccess={handleAuthSuccess} onRegisterSuccess={handleRegisterSuccess} siteSettings={siteSettings} />;
+      case 'auth': return <AuthView {...authViewProps} onBack={showMainList} onLoginSuccess={handleAuthSuccess} onRegisterSuccess={handleRegisterSuccess} siteSettings={siteSettings} />;
       case 'storyEdit': return storyInEditSession ? <StoryEditView story={storyInEditSession} onSave={handleSaveEditedStory} onCancel={handleCancelEditSession} allStories={stories} /> : (showMainList(), null);
       default: return null;
     }
