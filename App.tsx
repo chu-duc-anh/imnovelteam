@@ -9,7 +9,6 @@ import StoryDetailView from './components/StoryDetailView';
 import LoadingSpinner from './components/LoadingSpinner';
 import Modal from './components/Modal';
 import AuthView from './components/Auth/AuthView';
-import ChangePasswordModal from './components/Auth/ChangePasswordModal';
 import StoryEditView from './components/Admin/StoryEditView';
 import UserManagementView from './components/Admin/UserManagementView';
 import MyStoriesView from './components/MyStoriesView';
@@ -80,7 +79,6 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
   const [authViewProps, setAuthViewProps] = useState({ initialMode: 'login' as AuthMode, resetToken: null as string | null });
-  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   const [storyInEditSession, setStoryInEditSession] = useState<Story | null>(null);
 
@@ -229,7 +227,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const isAnyModalOpen =
-      showChangePasswordModal ||
       !!error ||
       infoModal?.isOpen ||
       confirmationModal?.isOpen;
@@ -246,7 +243,6 @@ const App: React.FC = () => {
       htmlElement.style.overflow = 'auto';
     };
   }, [
-    showChangePasswordModal,
     error,
     infoModal,
     confirmationModal,
@@ -398,7 +394,6 @@ const App: React.FC = () => {
     if (!currentUser) throw new Error("Not logged in.");
     await authService.updateUserPassword(oldPassword, newPassword);
     setInfoModal({ isOpen: true, title: "Success", message: "Your password has been updated." });
-    setShowChangePasswordModal(false);
   };
   
   const handleStartEditSession = useCallback((story?: Story) => {
@@ -795,7 +790,7 @@ const App: React.FC = () => {
       case 'mainList': return isFetchingList && paginatedStories.length === 0 ? <LoadingSpinner size="lg" message="Fetching stories..."/> : <StoryHub hotStories={hotStories} recentStories={recentStories} paginatedStories={paginatedStories} allGenres={allGenres} genreFilter={genreFilter} statusFilter={statusFilter} currentUser={currentUser} onSelectStory={handleSelectStoryFromList} onGenreChange={handleGenreFilterChange} onStatusChange={setStatusFilter} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />;
       case 'storyDetail': return selectedStory ? <StoryDetailView story={selectedStory} selectedVolumeId={selectedVolumeId} onSelectVolume={handleSelectVolume} onBackToMainList={showMainList} onNavigateToChapter={showChapterView} comments={selectedStoryComments} onAddComment={(storyId, text, parentId) => handleAddComment(storyId, text, parentId, null)} onToggleCommentLike={handleToggleCommentLike} currentUser={currentUser} onDeleteComment={handleDeleteComment} onTogglePinComment={handleTogglePinComment} onEditStory={handleStartEditSession} onToggleBookmark={handleToggleBookmark} onToggleLike={handleToggleStoryLike} onRateStory={handleRateStory} onLoginClick={() => showAuthView('login')} /> : (showMainList(), null);
       case 'chapterView': return selectedStory && selectedVolumeId && selectedChapterId ? <ChapterView story={selectedStory} volumeId={selectedVolumeId} chapterId={selectedChapterId} comments={selectedChapterComments} onNavigateChapter={navigateChapterInView} onGoToStoryDetail={(_, volId) => showStoryDetail(selectedStory, volId)} currentUser={currentUser} onAddComment={handleAddComment} onDeleteComment={handleDeleteComment} onToggleCommentLike={handleToggleCommentLike} onTogglePinComment={handleTogglePinComment} onLoginClick={() => showAuthView('login')} proseSizeClass={proseSizeClass} onProseSizeChange={handleProseSizeChange} onSelectChapter={handleChapterSelection}/> : (selectedStory ? showStoryDetail(selectedStory, selectedVolumeId) : showMainList(), null);
-      case 'userProfile': return currentUser ? <UserProfileView currentUser={currentUser} onUpdateAvatar={handleUpdateAvatar} onUpdateRace={handleUpdateRace} onBack={showMainList} theme={theme} onShowChangePasswordModal={() => setShowChangePasswordModal(true)} onLeaveAllyTeam={handleLeaveAllyTeam} /> : (showMainList(), null);
+      case 'userProfile': return currentUser ? <UserProfileView currentUser={currentUser} onUpdateAvatar={handleUpdateAvatar} onUpdateRace={handleUpdateRace} onBack={showMainList} theme={theme} onUpdatePassword={handleUpdatePassword} onLeaveAllyTeam={handleLeaveAllyTeam} /> : (showMainList(), null);
       case 'userManagement': return currentUser?.role === 'admin' ? <UserManagementView users={users} comments={comments} currentUser={currentUser} onUpdateUserRole={handleUpdateUserRole} onDeleteUser={handleDeleteUser} onBack={showMainList}/> : (showMainList(), null);
       case 'myStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser ? <MyStoriesView stories={managementStories} currentUser={currentUser} onAddNewStory={() => handleStartEditSession()} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /> : (showMainList(), null));
       case 'allyManagement': return currentUser?.role === 'contractor' ? <AllyManagementView currentUser={currentUser} allUsers={users} onManageAlly={handleManageAlly} onBack={showMainList}/> : (showMainList(), null);
@@ -863,7 +858,6 @@ const App: React.FC = () => {
         {currentUser && hasAppChrome && <FloatingChatButton unreadCount={unreadChatCount} onClick={showChatView}/>}
       </div>
 
-      {currentUser && <ChangePasswordModal isOpen={showChangePasswordModal} onClose={() => setShowChangePasswordModal(false)} onSubmit={handleUpdatePassword} />}
       <Modal isOpen={!!error} onClose={handleCloseErrorModal} title="Operation Alert" type="error"><p>{error}</p></Modal>
       {infoModal?.isOpen && ( <Modal isOpen={infoModal.isOpen} onClose={handleCloseInfoModal} title={infoModal.title} type="success" showFireworks={infoModal.showFireworks}><p className="whitespace-pre-wrap">{infoModal.message}</p></Modal> )}
       {confirmationModal?.isOpen && (
