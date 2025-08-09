@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useRef, useCallback } from 'react';
 import { StoryChapter, ContentBlock, ContentBlockText, ContentBlockImage } from '../../types';
 import ContentEditableDiv from '../ContentEditableDiv';
@@ -113,26 +110,47 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpda
     if (!annotationModal.isOpen || !annotationModal.range || !annotationModal.blockId) return;
 
     const { blockId, range } = annotationModal;
-    const annotationText = annotationInput;
+    const annotationText = annotationInput.trim();
 
-    if (annotationText && annotationText.trim()) {
-      const sanitizedText = annotationText.trim().replace(/"/g, '&quot;');
-      
-      const selection = window.getSelection();
-      if (selection) {
-          selection.removeAllRanges();
-          selection.addRange(range);
-          
-          const span = `<span class="annotated-text" data-tooltip="${sanitizedText}">${selection.toString()}<i class="annotation-icon"></i></span>`;
-          document.execCommand('insertHTML', false, span);
+    if (annotationText) {
+      // Sanitize the tooltip text to be used in an attribute
+      const sanitizedTooltipText = annotationText.replace(/"/g, '&quot;');
 
-          const editor = document.getElementById(`editor-${blockId}`);
-          if (editor) {
-              handleBlockChange(blockId, { value: editor.innerHTML });
-          }
+      // Create the main annotation span element
+      const span = document.createElement('span');
+      span.className = 'annotated-text';
+      span.setAttribute('data-tooltip', sanitizedTooltipText);
+
+      // Create the icon element
+      const icon = document.createElement('i');
+      icon.className = 'annotation-icon';
+
+      try {
+        // This is the key change: we manipulate the range object directly instead of using execCommand
+        
+        // Extract the selected content (text and nodes) from the document
+        const selectedContent = range.extractContents();
+        
+        // Put the extracted content inside our new span
+        span.appendChild(selectedContent);
+        // Add the icon after the content, still inside the span
+        span.appendChild(icon);
+
+        // Insert the fully constructed span back into the document where the selection was
+        range.insertNode(span);
+
+        // Sync the DOM change back to React's state
+        const editor = document.getElementById(`editor-${blockId}`);
+        if (editor) {
+          handleBlockChange(blockId, { value: editor.innerHTML });
+        }
+      } catch (e) {
+        console.error("Failed to apply annotation:", e);
+        // If something goes wrong, it's good to alert the user or log the error.
       }
     }
 
+    // Close the modal and reset its state
     setAnnotationModal({ isOpen: false, blockId: null, range: null });
     setAnnotationInput('');
   };
