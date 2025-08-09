@@ -49,7 +49,6 @@ const App: React.FC = () => {
   const [managementStories, setManagementStories] = useState<Story[]>([]);
 
   const [comments, setComments] = useState<Comment[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([]);
   const [theme, setTheme] = useState<Theme>('dark');
   const [chatThreads, setChatThreads] = useState<ChatThread[]>([]);
@@ -91,26 +90,18 @@ const App: React.FC = () => {
   
   const fetchInitialStaticData = useCallback(async (user: User | null) => {
       try {
-        const [fetchedComments, publicUsers, leaderboardData, fetchedSettings, fetchedHot, fetchedRecent] = await Promise.all([
-          dataService.getComments(),
-          authService.getPublicUsers(),
+        const [leaderboardData, fetchedSettings, fetchedHot, fetchedRecent] = await Promise.all([
           authService.getLeaderboard(),
           dataService.getSiteSettings(),
           dataService.getHotStories(),
           dataService.getRecentStories(),
         ]);
-        setComments(fetchedComments);
         setLeaderboardUsers(leaderboardData);
-        setUsers(publicUsers);
         setSiteSettings(fetchedSettings);
         setHotStories(fetchedHot);
         setRecentStories(fetchedRecent);
 
         if (user) {
-            if (user.role === 'admin' || user.role === 'contractor') {
-                const fullUsers = await authService.getAllUsers();
-                setUsers(fullUsers);
-            }
             const fetchedThreads = await chatService.getThreads();
             setChatThreads(fetchedThreads);
         } else {
@@ -274,15 +265,23 @@ const App: React.FC = () => {
     setSelectedStory(null);
     setSelectedVolumeId(null);
     setSelectedChapterId(null);
+    setComments([]);
     window.scrollTo(0, 0);
   }, []);
 
-  const showStoryDetail = useCallback((story: Story, volumeIdToSelect: string | null = null) => {
+  const showStoryDetail = useCallback(async (story: Story, volumeIdToSelect: string | null = null) => {
     setSelectedStory(story);
     setSelectedVolumeId(volumeIdToSelect);
     setCurrentView('storyDetail');
     setSelectedChapterId(null); 
     window.scrollTo(0, 0);
+    try {
+        const storyComments = await dataService.getComments(story.id);
+        setComments(storyComments);
+    } catch (err) {
+        console.error("Failed to fetch comments for story:", err);
+        setComments([]);
+    }
   }, []);
 
   const handleSelectStoryFromList = useCallback((story: Story) => {
@@ -335,7 +334,12 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   }, [currentUser]);
 
-  const showAllyManagement = useCallback(() => { if (currentUser?.role === 'contractor') { setCurrentView('allyManagement'); window.scrollTo(0, 0); } }, [currentUser]);
+  const showAllyManagement = useCallback(async () => { 
+    if (currentUser?.role === 'contractor') { 
+        setCurrentView('allyManagement'); 
+        window.scrollTo(0, 0); 
+    } 
+  }, [currentUser]);
   const showSiteSettings = useCallback(() => { if (currentUser?.role === 'admin') { setCurrentView('siteSettings'); window.scrollTo(0, 0); } }, [currentUser]);
 
   const handleShowBackgroundPreview = useCallback(() => {
@@ -505,12 +509,10 @@ const App: React.FC = () => {
     if (!text.trim()) { throw new Error("Comment cannot be empty."); }
     
     try {
-        const newCommentData = {
-          storyId, chapterId, parentId,
-          text: text.trim(),
-        };
-        const savedComment = await dataService.addComment(newCommentData);
-        setComments(prev => [...prev, savedComment]);
+        const newCommentData = { storyId, chapterId, parentId, text: text.trim() };
+        await dataService.addComment(newCommentData);
+        const updatedComments = await dataService.getComments(storyId);
+        setComments(updatedComments);
     } catch (err) {
         console.error("Failed to add comment:", err);
         setError(err instanceof Error ? err.message : "Failed to post comment.");
@@ -524,7 +526,7 @@ const App: React.FC = () => {
     setComments(prev => prev.map(c => c.id === commentId ? updatedComment : c));
   }, [currentUser]);
 
-  const handleDeleteComment = useCallback((commentId: string) => {
+  const handleDeleteComment = useCallback((commentId: string, storyId: string) => {
     setConfirmationModal({
       isOpen: true,
       title: "Xác nhận xóa",
@@ -533,7 +535,8 @@ const App: React.FC = () => {
       cancelText: "Không",
       onConfirm: async () => {
         await dataService.deleteComment(commentId);
-        setComments(prev => prev.filter(c => c.id !== commentId));
+        const updatedComments = await dataService.getComments(storyId);
+        setComments(updatedComments);
         setConfirmationModal(null);
       },
     });
@@ -642,38 +645,7 @@ const App: React.FC = () => {
       },
     });
   };
-
-  const handleUpdateUserRole = async (userId: string, newRole: 'user' | 'admin' | 'contractor') => {
-      if (currentUser?.role !== 'admin' || currentUser.id === userId) { setError("Action not permitted."); return; }
-      await authService.updateUserRole(userId, newRole);
-      setUsers(await authService.getAllUsers());
-  };
-
-  const handleDeleteUser = (userId: string) => {
-      if (currentUser?.role !== 'admin' || currentUser.id === userId) { setError("Action not permitted."); return; }
-      const userToDelete = users.find(u => u.id === userId);
-      if (!userToDelete) return;
-      setConfirmationModal({
-          isOpen: true,
-          title: "Confirm User Deletion",
-          message: `Are you sure you want to delete "${userToDelete.username}"? This will also remove all their comments and cannot be undone.`,
-          onConfirm: async () => {
-              await authService.deleteUser(userId);
-              setUsers(await authService.getAllUsers());
-              setComments(prev => prev.filter(c => c.userId.id !== userId));
-              setConfirmationModal(null);
-          }
-      });
-  };
   
-  const handleManageAlly = async (action: 'add' | 'remove', allyUsername: string) => {
-    if (!currentUser || currentUser.role !== 'contractor') {
-      throw new Error("Only contractors can manage allies.");
-    }
-    await authService.manageAlly(action, allyUsername);
-    setUsers(await authService.getAllUsers());
-  };
-
   const handleLeaveAllyTeam = () => {
     if (!currentUser || !currentUser.allyOf) return;
     setConfirmationModal({
@@ -788,12 +760,12 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (currentView) {
       case 'mainList': return isFetchingList && paginatedStories.length === 0 ? <LoadingSpinner size="lg" message="Fetching stories..."/> : <StoryHub hotStories={hotStories} recentStories={recentStories} paginatedStories={paginatedStories} allGenres={allGenres} genreFilter={genreFilter} statusFilter={statusFilter} currentUser={currentUser} onSelectStory={handleSelectStoryFromList} onGenreChange={handleGenreFilterChange} onStatusChange={setStatusFilter} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />;
-      case 'storyDetail': return selectedStory ? <StoryDetailView story={selectedStory} selectedVolumeId={selectedVolumeId} onSelectVolume={handleSelectVolume} onBackToMainList={showMainList} onNavigateToChapter={showChapterView} comments={selectedStoryComments} onAddComment={(storyId, text, parentId) => handleAddComment(storyId, text, parentId, null)} onToggleCommentLike={handleToggleCommentLike} currentUser={currentUser} onDeleteComment={handleDeleteComment} onTogglePinComment={handleTogglePinComment} onEditStory={handleStartEditSession} onToggleBookmark={handleToggleBookmark} onToggleLike={handleToggleStoryLike} onRateStory={handleRateStory} onLoginClick={() => showAuthView('login')} /> : (showMainList(), null);
-      case 'chapterView': return selectedStory && selectedVolumeId && selectedChapterId ? <ChapterView story={selectedStory} volumeId={selectedVolumeId} chapterId={selectedChapterId} comments={selectedChapterComments} onNavigateChapter={navigateChapterInView} onGoToStoryDetail={(_, volId) => showStoryDetail(selectedStory, volId)} currentUser={currentUser} onAddComment={handleAddComment} onDeleteComment={handleDeleteComment} onToggleCommentLike={handleToggleCommentLike} onTogglePinComment={handleTogglePinComment} onLoginClick={() => showAuthView('login')} proseSizeClass={proseSizeClass} onProseSizeChange={handleProseSizeChange} onSelectChapter={handleChapterSelection}/> : (selectedStory ? showStoryDetail(selectedStory, selectedVolumeId) : showMainList(), null);
+      case 'storyDetail': return selectedStory ? <StoryDetailView story={selectedStory} selectedVolumeId={selectedVolumeId} onSelectVolume={handleSelectVolume} onBackToMainList={showMainList} onNavigateToChapter={showChapterView} comments={selectedStoryComments} onAddComment={(storyId, text, parentId) => handleAddComment(storyId, text, parentId, null)} onToggleCommentLike={handleToggleCommentLike} currentUser={currentUser} onDeleteComment={(commentId) => handleDeleteComment(commentId, selectedStory.id)} onTogglePinComment={handleTogglePinComment} onEditStory={handleStartEditSession} onToggleBookmark={handleToggleBookmark} onToggleLike={handleToggleStoryLike} onRateStory={handleRateStory} onLoginClick={() => showAuthView('login')} /> : (showMainList(), null);
+      case 'chapterView': return selectedStory && selectedVolumeId && selectedChapterId ? <ChapterView story={selectedStory} volumeId={selectedVolumeId} chapterId={selectedChapterId} comments={selectedChapterComments} onNavigateChapter={navigateChapterInView} onGoToStoryDetail={(_, volId) => showStoryDetail(selectedStory, volId)} currentUser={currentUser} onAddComment={handleAddComment} onDeleteComment={(commentId) => handleDeleteComment(commentId, selectedStory.id)} onToggleCommentLike={handleToggleCommentLike} onTogglePinComment={handleTogglePinComment} onLoginClick={() => showAuthView('login')} proseSizeClass={proseSizeClass} onProseSizeChange={handleProseSizeChange} onSelectChapter={handleChapterSelection}/> : (selectedStory ? showStoryDetail(selectedStory, selectedVolumeId) : showMainList(), null);
       case 'userProfile': return currentUser ? <UserProfileView currentUser={currentUser} onUpdateAvatar={handleUpdateAvatar} onUpdateRace={handleUpdateRace} onBack={showMainList} theme={theme} onUpdatePassword={handleUpdatePassword} onLeaveAllyTeam={handleLeaveAllyTeam} /> : (showMainList(), null);
-      case 'userManagement': return currentUser?.role === 'admin' ? <UserManagementView users={users} comments={comments} currentUser={currentUser} onUpdateUserRole={handleUpdateUserRole} onDeleteUser={handleDeleteUser} onBack={showMainList}/> : (showMainList(), null);
+      case 'userManagement': return currentUser?.role === 'admin' ? <UserManagementView currentUser={currentUser} onBack={showMainList}/> : (showMainList(), null);
       case 'myStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser ? <MyStoriesView stories={managementStories} currentUser={currentUser} onAddNewStory={() => handleStartEditSession()} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /> : (showMainList(), null));
-      case 'allyManagement': return currentUser?.role === 'contractor' ? <AllyManagementView currentUser={currentUser} allUsers={users} onManageAlly={handleManageAlly} onBack={showMainList}/> : (showMainList(), null);
+      case 'allyManagement': return currentUser?.role === 'contractor' ? <AllyManagementView currentUser={currentUser} onBack={showMainList}/> : (showMainList(), null);
       case 'teamStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser?.allyOf ? <TeamStoriesView stories={managementStories} currentUser={currentUser} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /> : (showMainList(), null));
       case 'chat': return currentUser ? <ChatView currentUser={currentUser} chatThreads={chatThreads} onSendMessage={handleSendMessage} onMarkMessagesAsRead={handleMarkMessagesAsRead} onDeleteThread={handleDeleteThread} onBack={handleBackFromChat}/> : (showMainList(), null);
       case 'siteSettings': return currentUser?.role === 'admin' ? <SiteSettingsView initialSettings={siteSettings} onSave={handleSaveSiteSettings} onBack={showMainList} onShowBackgroundPreview={handleShowBackgroundPreview} /> : (showMainList(), null);
