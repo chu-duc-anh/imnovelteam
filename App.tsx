@@ -243,25 +243,25 @@ const App: React.FC = () => {
     isSearchOverlayOpen,
   ]);
   
-  const handleAuthSuccess = async (user: User) => {
+  const handleAuthSuccess = useCallback(async (user: User) => {
      setCurrentUser(user);
      await fetchInitialStaticData(user);
      setCurrentView('mainList');
      setAuthViewProps({ initialMode: 'login', resetToken: null });
-  };
+  }, [fetchInitialStaticData]);
   
-  const handleRegisterSuccess = (user: User) => {
+  const handleRegisterSuccess = useCallback((user: User) => {
      setInfoModal({
         isOpen: true,
         title: "Registration Successful!",
         message: "Your account has been created. Please log in to continue.",
      });
-  }
+  }, []);
   
-  const showAuthView = (mode: 'login' | 'register') => {
+  const showAuthView = useCallback((mode: 'login' | 'register') => {
     setAuthViewProps({ initialMode: mode, resetToken: null });
     setCurrentView('auth');
-  };
+  }, []);
   
   const showMainList = useCallback(() => {
     setCurrentView('mainList');
@@ -403,18 +403,18 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await authService.logout();
     setCurrentUser(null);
     await fetchInitialStaticData(null); 
     showMainList(); 
-  };
+  }, [fetchInitialStaticData, showMainList]);
   
-  const handleUpdatePassword = async (oldPassword: string, newPassword: string) => {
+  const handleUpdatePassword = useCallback(async (oldPassword: string, newPassword: string) => {
     if (!currentUser) throw new Error("Not logged in.");
     await authService.updateUserPassword(oldPassword, newPassword);
     setInfoModal({ isOpen: true, title: "Success", message: "Your password has been updated." });
-  };
+  }, [currentUser]);
   
   const handleStartEditSession = useCallback((story?: Story) => {
     const canCreate = currentUser?.role === 'admin' || currentUser?.role === 'contractor';
@@ -481,7 +481,7 @@ const App: React.FC = () => {
     }
   }, [currentUser, showStoryDetail]);
 
-  const handleDeleteStory = (storyId: string) => {
+  const handleDeleteStory = useCallback((storyId: string) => {
      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'contractor' && !currentUser.allyOf)) { setError("You are not authorized."); return; }
      const storyToDelete = paginatedStories.find(s=>s.id === storyId) || managementStories.find(s => s.id === storyId);
      if (!storyToDelete) { setError("Story not found for deletion."); return; }
@@ -518,7 +518,7 @@ const App: React.FC = () => {
         setConfirmationModal(null);
       }
     });
-  };
+  }, [currentUser, paginatedStories, managementStories, currentView, currentPage, statusFilter, genreFilter, showMyStories, showTeamStories, selectedStory, showMainList]);
 
   const handleAddComment = useCallback(async (storyId: string, text: string, parentId: string | null = null, chapterId: string | null = null) => {
     if (!currentUser) { setError("You must be logged in to comment."); throw new Error("User not logged in."); }
@@ -599,19 +599,19 @@ const App: React.FC = () => {
     }
   }, [currentUser, selectedStory?.id]);
   
-  const handleSendMessage = async (text: string, receiverId: string) => {
+  const handleSendMessage = useCallback(async (text: string, receiverId: string) => {
     if (!currentUser) throw new Error("User not logged in.");
     await chatService.sendMessage(text, receiverId);
     setChatThreads(await chatService.getThreads());
-  };
+  }, [currentUser]);
   
-  const handleMarkMessagesAsRead = async (threadUserId: string) => {
+  const handleMarkMessagesAsRead = useCallback(async (threadUserId: string) => {
     if (!currentUser) return;
     await chatService.markMessagesAsRead(threadUserId);
     setChatThreads(await chatService.getThreads());
-  };
+  }, [currentUser]);
   
-  const handleDeleteThread = (threadId: string) => {
+  const handleDeleteThread = useCallback((threadId: string) => {
     if (currentUser?.role !== 'admin') {
       setError("You are not authorized to delete conversations.");
       return;
@@ -636,15 +636,15 @@ const App: React.FC = () => {
             }
         },
     });
-  };
+  }, [currentUser, chatThreads]);
 
-  const handleUpdateAvatar = async (newAvatarDataUrl: string) => {
+  const handleUpdateAvatar = useCallback(async (newAvatarDataUrl: string) => {
     if (!currentUser) throw new Error("User not logged in.");
     const updatedUser = await authService.updateUserAvatar(currentUser.id, newAvatarDataUrl);
     setCurrentUser(updatedUser);
-  };
+  }, [currentUser]);
   
-  const handleUpdateRace = async (newRace: string) => {
+  const handleUpdateRace = useCallback(async (newRace: string) => {
     if (!currentUser) throw new Error("User not logged in.");
     if (currentUser.race === newRace) return;
     setConfirmationModal({
@@ -660,9 +660,9 @@ const App: React.FC = () => {
         setInfoModal({ isOpen: true, title: "Đã đổi chủng loài", message: `Chủng loài của bạn đã được cập nhật thành ${newRace}.` });
       },
     });
-  };
+  }, [currentUser]);
   
-  const handleLeaveAllyTeam = () => {
+  const handleLeaveAllyTeam = useCallback(() => {
     if (!currentUser || !currentUser.allyOf) return;
     setConfirmationModal({
         isOpen: true,
@@ -681,9 +681,9 @@ const App: React.FC = () => {
             }
         },
     });
-  };
+  }, [currentUser]);
 
-  const handleSaveSiteSettings = async (settingsToSave: Omit<SiteSetting, 'id'>[]) => {
+  const handleSaveSiteSettings = useCallback(async (settingsToSave: Omit<SiteSetting, 'id'>[]) => {
       if (currentUser?.role !== 'admin') {
           setError("You are not authorized to change site settings.");
           return;
@@ -696,16 +696,16 @@ const App: React.FC = () => {
       } catch (err) {
           setError(err instanceof Error ? err.message : "Failed to save settings.");
       }
-  };
+  }, [currentUser]);
 
-  const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
-  const toggleMusic = () => setIsMusicPlaying(prev => !prev);
-  const handleCloseErrorModal = () => setError(null);
-  const handleCloseInfoModal = () => setInfoModal(null);
-  const handleCloseConfirmationModal = () => setConfirmationModal(null);
-  const handleConfirmModalAction = () => { if (confirmationModal) confirmationModal.onConfirm(); };
+  const toggleTheme = useCallback(() => setTheme(prev => (prev === 'light' ? 'dark' : 'light')), []);
+  const toggleMusic = useCallback(() => setIsMusicPlaying(prev => !prev), []);
+  const handleCloseErrorModal = useCallback(() => setError(null), []);
+  const handleCloseInfoModal = useCallback(() => setInfoModal(null), []);
+  const handleCloseConfirmationModal = useCallback(() => setConfirmationModal(null), []);
+  const handleConfirmModalAction = useCallback(() => { if (confirmationModal) confirmationModal.onConfirm(); }, [confirmationModal]);
 
-  const handleGenreFilterChange = (genre: string) => {
+  const handleGenreFilterChange = useCallback((genre: string) => {
     if (genre === '') {
       setGenreFilter({});
       return;
@@ -724,9 +724,9 @@ const App: React.FC = () => {
       }
       return newFilter;
     });
-  };
+  }, []);
   
-  const handleProseSizeChange = (direction: 'increase' | 'decrease') => {
+  const handleProseSizeChange = useCallback((direction: 'increase' | 'decrease') => {
     setProseSizeClass(currentClass => {
         const currentIndex = PROSE_CLASSES.indexOf(currentClass);
         if (direction === 'increase') {
@@ -737,14 +737,14 @@ const App: React.FC = () => {
             return PROSE_CLASSES[newIndex];
         }
     });
-  };
+  }, []);
   
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
       window.scrollTo(0,0);
     }
-  };
+  }, [totalPages]);
   
   const allGenres = useMemo(() => {
     const genreSet = new Set<string>();
