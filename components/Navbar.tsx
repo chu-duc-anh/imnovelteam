@@ -11,8 +11,7 @@ interface NavbarProps {
   onLoginClick: () => void;
   onRegisterClick: () => void;
   onLogoutClick: () => void;
-  onSearchChange: (searchTerm: string) => void;
-  searchTerm: string;
+  onSearchClick: () => void;
   onShowUserProfile: () => void;
   onShowUserManagement: () => void;
   onShowMyStories: () => void;
@@ -32,8 +31,7 @@ const Navbar: React.FC<NavbarProps> = ({
   onLoginClick,
   onRegisterClick,
   onLogoutClick,
-  onSearchChange,
-  searchTerm,
+  onSearchClick,
   onShowUserProfile,
   onShowUserManagement,
   onShowMyStories,
@@ -89,21 +87,18 @@ const Navbar: React.FC<NavbarProps> = ({
           <div className="flex-1 flex justify-center px-2 lg:ml-6 lg:justify-end">
             <div className="max-w-lg w-full lg:max-w-xs">
               <label htmlFor="search" className="sr-only">Tìm kiếm truyện</label>
-              <div className="relative">
+              <div className="relative" onClick={onSearchClick} role="button" tabIndex={0}>
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg className="h-5 w-5 text-primary-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <input
+                <div
                   id="search"
-                  name="search"
-                  className="block w-full pl-10 pr-3 py-2.5 border border-primary-300 dark:border-primary-700 rounded-full leading-5 bg-primary-200/50 dark:bg-primary-800/50 text-primary-900 dark:text-primary-100 placeholder-primary-500 dark:placeholder-primary-500 focus:outline-none focus:bg-white dark:focus:bg-primary-900 focus:border-secondary-500 focus:ring-1 focus:ring-secondary-500 sm:text-sm transition-colors duration-300"
-                  placeholder="Tìm truyện..."
-                  type="search"
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                />
+                  className="block w-full pl-10 pr-3 py-2.5 border border-primary-300 dark:border-primary-700 rounded-full leading-5 bg-primary-200/50 dark:bg-primary-800/50 text-primary-500 dark:text-primary-500 placeholder-primary-500 dark:placeholder-primary-500 cursor-pointer sm:text-sm transition-colors duration-300"
+                >
+                  Tìm truyện...
+                </div>
               </div>
             </div>
           </div>
