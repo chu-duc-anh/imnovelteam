@@ -16,6 +16,10 @@ type LocalSetting = {
   mediaType: 'image' | 'video' | 'audio';
 };
 
+type PendingFiles = {
+  [key: string]: File | null;
+};
+
 const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, onSave, onBack, onShowBackgroundPreview }) => {
   const getInitialLocalSetting = (key: 'backgroundLight' | 'backgroundDark' | 'authBackground' | 'backgroundMusic'): LocalSetting => {
     const setting = initialSettings.find(s => s.key === key);
@@ -33,11 +37,19 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
   const [isSaving, setIsSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<PendingFiles>({});
 
   const lightFileInputRef = useRef<HTMLInputElement>(null);
   const darkFileInputRef = useRef<HTMLInputElement>(null);
   const authFileInputRef = useRef<HTMLInputElement>(null);
   const musicFileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrls = useRef<string[]>([]);
+
+  useEffect(() => {
+    return () => {
+      objectUrls.current.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   const fullMusicUrl = useMemo(() => {
     return toAbsoluteUrl(musicSetting.value);
@@ -63,42 +75,61 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
       }
 
       setError(null);
-      setUploading(settingKey);
+      setPendingFiles(prev => ({...prev, [settingKey]: file}));
+
+      const localUrl = URL.createObjectURL(file);
+      objectUrls.current.push(localUrl);
+      setter({ value: localUrl, mediaType });
       
-      try {
-        const backendUrl = await fileService.upload(file);
-        setter({ value: backendUrl, mediaType });
-      } catch (err) {
-          setError(err instanceof Error ? err.message : `Failed to upload ${mediaType}.`);
-      } finally {
-          setUploading(null);
-          // Clear the file input so the same file can be re-uploaded if needed
-          if (e.target) e.target.value = '';
-      }
+      if (e.target) e.target.value = '';
     }
   };
 
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<LocalSetting>>) => {
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<LocalSetting>>, settingKey: string) => {
     const url = e.target.value;
     const mediaType = getMediaTypeFromFile(url);
     setter({ value: url, mediaType });
+    setPendingFiles(prev => ({ ...prev, [settingKey]: null }));
   };
   
   const handleSaveSettings = async () => {
     setError(null);
     setIsSaving(true);
     try {
+        const finalSettings: { [key: string]: LocalSetting } = {
+            backgroundLight: { ...lightSetting },
+            backgroundDark: { ...darkSetting },
+            authBackground: { ...authSetting },
+            backgroundMusic: { ...musicSetting },
+        };
+
+        for (const key of Object.keys(pendingFiles)) {
+            const file = pendingFiles[key];
+            if (file) {
+                setUploading(key);
+                const backendUrl = await fileService.upload(file);
+                finalSettings[key] = {
+                    value: backendUrl,
+                    mediaType: getMediaTypeFromFile(file.name),
+                };
+                setUploading(null);
+            }
+        }
+
         const settingsPayload: Omit<SiteSetting, 'id'>[] = [
-            { key: 'backgroundLight', value: lightSetting.value, mediaType: lightSetting.mediaType },
-            { key: 'backgroundDark', value: darkSetting.value, mediaType: darkSetting.mediaType },
-            { key: 'authBackground', value: authSetting.value, mediaType: 'image' },
-            { key: 'backgroundMusic', value: musicSetting.value, mediaType: 'audio' },
+            { key: 'backgroundLight', ...finalSettings.backgroundLight },
+            { key: 'backgroundDark', ...finalSettings.backgroundDark },
+            { key: 'authBackground', ...finalSettings.authBackground },
+            { key: 'backgroundMusic', ...finalSettings.backgroundMusic },
         ];
+
         await onSave(settingsPayload);
+        setPendingFiles({});
     } catch(err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred.');
     } finally {
         setIsSaving(false);
+        setUploading(null);
     }
   };
 
@@ -164,7 +195,7 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
                     <div className="space-y-4 w-full lg:w-1/2">
                         <div>
                             <label htmlFor="music-url" className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">URL Nhạc (mp3, wav, etc.)</label>
-                            <input id="music-url" type="text" value={musicSetting.value} onChange={(e) => handleUrlChange(e, setMusicSetting)} placeholder="https://example.com/music.mp3" className="w-full p-2 bg-primary-100 dark:bg-primary-800/80 border border-primary-300 dark:border-primary-700 rounded-md shadow-sm focus:ring-secondary-500 focus:border-secondary-500" />
+                            <input id="music-url" type="text" value={musicSetting.value} onChange={(e) => handleUrlChange(e, setMusicSetting, 'backgroundMusic')} placeholder="https://example.com/music.mp3" className="w-full p-2 bg-primary-100 dark:bg-primary-800/80 border border-primary-300 dark:border-primary-700 rounded-md shadow-sm focus:ring-secondary-500 focus:border-secondary-500" />
                         </div>
                         <div>
                             <label htmlFor="music-file" className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">Hoặc Tải lên Tệp Âm thanh</label>
@@ -184,7 +215,7 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
                     <div className="space-y-4 w-full lg:w-1/2">
                         <div>
                             <label htmlFor="auth-url" className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">URL Nền (Chỉ hình ảnh)</label>
-                            <input id="auth-url" type="text" value={authSetting.value} onChange={(e) => handleUrlChange(e, setAuthSetting)} placeholder="https://example.com/image.jpg" className="w-full p-2 bg-primary-100 dark:bg-primary-800/80 border border-primary-300 dark:border-primary-700 rounded-md shadow-sm focus:ring-secondary-500 focus:border-secondary-500" />
+                            <input id="auth-url" type="text" value={authSetting.value} onChange={(e) => handleUrlChange(e, setAuthSetting, 'authBackground')} placeholder="https://example.com/image.jpg" className="w-full p-2 bg-primary-100 dark:bg-primary-800/80 border border-primary-300 dark:border-primary-700 rounded-md shadow-sm focus:ring-secondary-500 focus:border-secondary-500" />
                         </div>
                         <div>
                             <label htmlFor="auth-file" className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">Hoặc Tải lên Tệp</label>
@@ -203,7 +234,7 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
                         <BackgroundPreview setting={lightSetting} title="Chế độ Sáng" uploadingKey="backgroundLight" />
                         <div>
                             <label htmlFor="light-url" className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">URL Nền (Sáng)</label>
-                            <input id="light-url" type="text" value={lightSetting.value} onChange={(e) => handleUrlChange(e, setLightSetting)} placeholder="https://example.com/image.jpg" className="w-full p-2 bg-primary-100 dark:bg-primary-800/80 border border-primary-300 dark:border-primary-700 rounded-md shadow-sm focus:ring-secondary-500 focus:border-secondary-500" />
+                            <input id="light-url" type="text" value={lightSetting.value} onChange={(e) => handleUrlChange(e, setLightSetting, 'backgroundLight')} placeholder="https://example.com/image.jpg" className="w-full p-2 bg-primary-100 dark:bg-primary-800/80 border border-primary-300 dark:border-primary-700 rounded-md shadow-sm focus:ring-secondary-500 focus:border-secondary-500" />
                         </div>
                         <div>
                             <label htmlFor="light-file" className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">Hoặc Tải lên Tệp</label>
@@ -216,7 +247,7 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ initialSettings, on
                         <BackgroundPreview setting={darkSetting} title="Chế độ Tối" uploadingKey="backgroundDark" />
                         <div>
                             <label htmlFor="dark-url" className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">URL Nền (Tối)</label>
-                            <input id="dark-url" type="text" value={darkSetting.value} onChange={(e) => handleUrlChange(e, setDarkSetting)} placeholder="https://example.com/video.mp4" className="w-full p-2 bg-primary-100 dark:bg-primary-800/80 border border-primary-300 dark:border-primary-700 rounded-md shadow-sm focus:ring-secondary-500 focus:border-secondary-500" />
+                            <input id="dark-url" type="text" value={darkSetting.value} onChange={(e) => handleUrlChange(e, setDarkSetting, 'backgroundDark')} placeholder="https://example.com/video.mp4" className="w-full p-2 bg-primary-100 dark:bg-primary-800/80 border border-primary-300 dark:border-primary-700 rounded-md shadow-sm focus:ring-secondary-500 focus:border-secondary-500" />
                         </div>
                         <div>
                             <label htmlFor="dark-file" className="block text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">Hoặc Tải lên Tệp</label>
