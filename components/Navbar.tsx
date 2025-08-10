@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { User } from '../types';
 import { DEFAULT_AVATAR_URL } from '../constants';
 import UserProfilePopover from './UserProfilePopover'; 
@@ -188,4 +188,4 @@ const Navbar: React.FC<NavbarProps> = ({
   );
 };
 
-export default Navbar;
+export default memo(Navbar);
