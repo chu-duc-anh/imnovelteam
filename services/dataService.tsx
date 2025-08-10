@@ -1,7 +1,7 @@
 
 
 import { api } from './api';
-import { Story, Comment, Volume, ContentBlock, SiteSetting } from '../types';
+import { Story, Comment, Volume, ContentBlock, SiteSetting, SimplifiedStory } from '../types';
 
 interface GetStoriesParams {
     page?: number;
@@ -35,6 +35,15 @@ export const dataService = {
 
     const queryString = query.toString();
     return api.get<PaginatedStoriesResponse>(`/stories?${queryString}`);
+  },
+
+  async getStoryById(id: string): Promise<Story> {
+    return api.get<Story>(`/stories/${id}`);
+  },
+
+  async searchStories(term: string): Promise<SimplifiedStory[]> {
+    if (!term.trim()) return [];
+    return api.get<SimplifiedStory[]>(`/stories/search?term=${encodeURIComponent(term)}`);
   },
 
   async getHotStories(): Promise<Story[]> {
