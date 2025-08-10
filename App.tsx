@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Story, User, Volume, StoryChapter, Comment, ContentBlock, ContentBlockText, ContentBlockImage, ChatThread, LeaderboardUser, SiteSetting } from './types';
+import { Story, User, Volume, StoryChapter, Comment, ContentBlock, ContentBlockText, ContentBlockImage, ChatThread, LeaderboardUser, SiteSetting, SimplifiedStory } from './types';
 import { createText, createVolume, createChapter, createImage, DEFAULT_AVATAR_URL } from './constants';
 import { generateId, toAbsoluteUrl } from './utils';
 import Navbar from './components/Navbar';
@@ -31,6 +31,7 @@ import DynamicBackground from './components/DynamicBackground';
 import BackgroundPreviewView from './components/BackgroundPreviewView';
 import SocialLinks from './components/SocialLinks';
 import BackgroundMusicPlayer from './components/BackgroundMusicPlayer';
+import SearchOverlay from './components/SearchOverlay';
 
 const THEME_KEY = 'ai_story_teller_theme';
 const PROSE_SIZE_KEY = 'imnovel_prose_size';
@@ -81,8 +82,8 @@ const App: React.FC = () => {
   const [authViewProps, setAuthViewProps] = useState({ initialMode: 'login' as AuthMode, resetToken: null as string | null });
 
   const [storyInEditSession, setStoryInEditSession] = useState<Story | null>(null);
-
-  const [searchTerm, setSearchTerm] = useState('');
+  
+  const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [genreFilter, setGenreFilter] = useState<{ [key: string]: 'include' | 'exclude' }>({});
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -124,7 +125,6 @@ const App: React.FC = () => {
         const data = await dataService.getStories({
           page: currentPage,
           limit: STORIES_PER_PAGE,
-          search: searchTerm,
           status: statusFilter,
           genresInclude: includeGenres,
           genresExclude: excludeGenres,
@@ -146,7 +146,7 @@ const App: React.FC = () => {
     };
 
     if(!isLoadingInitial) fetchPaginatedStories();
-  }, [currentPage, searchTerm, genreFilter, statusFilter, isLoadingInitial]);
+  }, [currentPage, genreFilter, statusFilter, isLoadingInitial]);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem(THEME_KEY) as Theme | null;
@@ -193,7 +193,7 @@ const App: React.FC = () => {
   
   useEffect(() => {
     setCurrentPage(1); 
-  }, [searchTerm, genreFilter, statusFilter]);
+  }, [genreFilter, statusFilter]);
   
   useEffect(() => {
     if (currentUser && chatThreads.length > 0) {
@@ -221,7 +221,8 @@ const App: React.FC = () => {
     const isAnyModalOpen =
       !!error ||
       infoModal?.isOpen ||
-      confirmationModal?.isOpen;
+      confirmationModal?.isOpen ||
+      isSearchOverlayOpen;
 
     const htmlElement = document.documentElement;
 
@@ -238,7 +239,8 @@ const App: React.FC = () => {
     error,
     infoModal,
     confirmationModal,
-    currentView
+    currentView,
+    isSearchOverlayOpen,
   ]);
   
   const handleAuthSuccess = async (user: User) => {
@@ -287,6 +289,19 @@ const App: React.FC = () => {
 
   const handleSelectStoryFromList = useCallback((story: Story) => {
     showStoryDetail(story, null);
+  }, [showStoryDetail]);
+
+  const handleSelectStoryFromSearch = useCallback(async (story: SimplifiedStory) => {
+    setIsSearchOverlayOpen(false);
+    setIsFetchingList(true); 
+    try {
+        const fullStory = await dataService.getStoryById(story.id);
+        showStoryDetail(fullStory);
+    } catch(err) {
+        setError(err instanceof Error ? err.message : 'Could not load the selected story.');
+    } finally {
+        setIsFetchingList(false);
+    }
   }, [showStoryDetail]);
   
   const showUserProfile = useCallback(() => { if (currentUser) { setCurrentView('userProfile'); window.scrollTo(0, 0); } }, [currentUser]);
@@ -479,7 +494,7 @@ const App: React.FC = () => {
         await dataService.deleteStory(storyId);
         // Refetch relevant lists
         if(currentView === 'mainList') {
-          const data = await dataService.getStories({ page: currentPage, limit: STORIES_PER_PAGE, search: searchTerm, status: statusFilter, genresInclude: Object.keys(genreFilter).filter(g=>genreFilter[g]==='include'), genresExclude: Object.keys(genreFilter).filter(g=>genreFilter[g]==='exclude') });
+          const data = await dataService.getStories({ page: currentPage, limit: STORIES_PER_PAGE, status: statusFilter, genresInclude: Object.keys(genreFilter).filter(g=>genreFilter[g]==='include'), genresExclude: Object.keys(genreFilter).filter(g=>genreFilter[g]==='exclude') });
           if (data && Array.isArray(data.stories)) {
             setPaginatedStories(data.stories);
             setTotalPages(data.pages);
@@ -786,7 +801,7 @@ const App: React.FC = () => {
       <DynamicBackground settings={siteSettings} theme={theme} />
       <BackgroundMusicPlayer musicUrl={backgroundMusicUrl} isPlaying={isMusicPlaying} />
       
-      {hasAppChrome && <Navbar currentUser={currentUser} theme={theme} onToggleTheme={toggleTheme} onHomeClick={showMainList} onLoginClick={() => showAuthView('login')} onRegisterClick={() => showAuthView('register')} onLogoutClick={handleLogout} onSearchChange={setSearchTerm} searchTerm={searchTerm} onShowUserProfile={showUserProfile} onShowUserManagement={showUserManagement} onShowMyStories={showMyStories} onShowAllyManagement={showAllyManagement} onShowTeamStories={showTeamStories} onUpdateAvatar={handleUpdateAvatar} onShowSiteSettings={showSiteSettings} isMusicPlaying={isMusicPlaying} onToggleMusic={toggleMusic}/>}
+      {hasAppChrome && <Navbar currentUser={currentUser} theme={theme} onToggleTheme={toggleTheme} onHomeClick={showMainList} onLoginClick={() => showAuthView('login')} onRegisterClick={() => showAuthView('register')} onLogoutClick={handleLogout} onSearchClick={() => setIsSearchOverlayOpen(true)} onShowUserProfile={showUserProfile} onShowUserManagement={showUserManagement} onShowMyStories={showMyStories} onShowAllyManagement={showAllyManagement} onShowTeamStories={showTeamStories} onUpdateAvatar={handleUpdateAvatar} onShowSiteSettings={showSiteSettings} isMusicPlaying={isMusicPlaying} onToggleMusic={toggleMusic}/>}
       
       <div className="flex-grow w-full">
         {hasAppChrome ? (
@@ -831,6 +846,12 @@ const App: React.FC = () => {
         {currentUser && hasAppChrome && currentView !== 'chapterView' && <FloatingChatButton unreadCount={unreadChatCount} onClick={showChatView}/>}
       </div>
 
+      <SearchOverlay 
+        isOpen={isSearchOverlayOpen} 
+        onClose={() => setIsSearchOverlayOpen(false)} 
+        onSelectStory={handleSelectStoryFromSearch}
+      />
+      
       <Modal isOpen={!!error} onClose={handleCloseErrorModal} title="Operation Alert" type="error"><p>{error}</p></Modal>
       {infoModal?.isOpen && ( <Modal isOpen={infoModal.isOpen} onClose={handleCloseInfoModal} title={infoModal.title} type="success" showFireworks={infoModal.showFireworks}><p className="whitespace-pre-wrap">{infoModal.message}</p></Modal> )}
       {confirmationModal?.isOpen && (
