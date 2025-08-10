@@ -1,5 +1,6 @@
 import { api } from './api';
 import { User, LeaderboardUser } from '../types';
+import { fileService } from './fileService';
 
 const AUTH_STORAGE_KEY = 'imnovel_jwt';
 
@@ -50,9 +51,16 @@ export const authService = {
   },
 
   async updateUserAvatar(userId: string, newAvatarDataUrl: string): Promise<User> {
-    // The user ID from the parameter isn't strictly necessary if the backend
-    // always updates the currently authenticated user, but we pass it for clarity.
-    return await api.put<User>(`/users/profile`, { picture: newAvatarDataUrl });
+    // Convert data URL to a File object to upload
+    const response = await fetch(newAvatarDataUrl);
+    const blob = await response.blob();
+    const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
+
+    // Upload the file using the existing file service
+    const fileUrl = await fileService.upload(file);
+
+    // Update the user's profile with the new URL
+    return await api.put<User>(`/users/profile`, { picture: fileUrl });
   },
 
   async updateUserPassword(oldPassword: string, newPassword: string): Promise<void> {
