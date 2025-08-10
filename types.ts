@@ -1,4 +1,12 @@
 
+export interface SimplifiedStory {
+  id: string;
+  title: string;
+  coverImageUrl: string;
+  author: string;
+  translator?: string;
+}
+
 export interface ContentBlockText {
   type: 'text';
   id: string; // For React keys and editing
