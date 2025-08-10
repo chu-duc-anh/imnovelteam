@@ -33,7 +33,17 @@ async function request<T>(endpoint: string, options: ApiFetchOptions, isMultipar
     if (!isMultipart) { headers['Content-Type'] = 'application/json'; }
     if (token) { headers['Authorization'] = `Bearer ${token}`; }
 
-    const response = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers });
+    let response: Response;
+    try {
+        response = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers });
+    } catch (error) {
+        if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+             throw new Error('A network error occurred. This could be a problem with your connection, a firewall, or the server. Please check your connection and try again.');
+        }
+        // rethrow other fetch errors
+        throw error;
+    }
+
 
     if (response.status === 401) {
         // Global handler for unauthorized requests (e.g., expired token).
