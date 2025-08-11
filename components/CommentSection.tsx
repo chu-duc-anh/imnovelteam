@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { Comment, User } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { DEFAULT_AVATAR_URL } from '../constants';
@@ -324,4 +325,4 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   )
 };
 
-export default CommentSection;
+export default memo(CommentSection);
