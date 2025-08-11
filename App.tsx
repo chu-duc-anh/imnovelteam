@@ -365,7 +365,7 @@ const App: React.FC = () => {
   }, [currentView]);
 
   const handleSelectVolume = useCallback((volumeId: string | null) => { setSelectedVolumeId(volumeId); setSelectedChapterId(null); window.scrollTo(0,0); }, []);
-  const showChatView = useCallback(() => { if (!currentUser) { showAuthView('login'); return; } setCurrentView('chat'); }, [currentUser]);
+  const showChatView = useCallback(() => { if (!currentUser) { showAuthView('login'); return; } setCurrentView('chat'); }, [currentUser, showAuthView]);
   const handleBackFromChat = useCallback(() => { setCurrentView('mainList'); }, []);
 
   const showChapterView = useCallback((volumeId: string, chapterId: string) => {
@@ -398,10 +398,10 @@ const App: React.FC = () => {
     if (nextChapter) { setSelectedChapterId(nextChapter.id); window.scrollTo(0,0); }
   }, [selectedStory, selectedVolumeId, selectedChapterId]);
 
-  const handleChapterSelection = (chapterId: string) => {
+  const handleChapterSelection = useCallback((chapterId: string) => {
     setSelectedChapterId(chapterId);
     window.scrollTo(0, 0);
-  };
+  }, []);
 
   const handleLogout = useCallback(async () => {
     await authService.logout();
@@ -540,7 +540,7 @@ const App: React.FC = () => {
     if (!currentUser) { showAuthView('login'); return; }
     const updatedComment = await dataService.toggleCommentLike(commentId);
     setComments(prev => prev.map(c => c.id === commentId ? updatedComment : c));
-  }, [currentUser]);
+  }, [currentUser, showAuthView]);
 
   const handleDeleteComment = useCallback((commentId: string, storyId: string) => {
     setConfirmationModal({
@@ -573,7 +573,7 @@ const App: React.FC = () => {
     } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update bookmark.");
     }
-  }, [currentUser, selectedStory?.id]);
+  }, [currentUser, selectedStory?.id, showAuthView]);
 
   const handleToggleStoryLike = useCallback(async (storyId: string) => {
     if (!currentUser) { showAuthView('login'); return; }
@@ -584,7 +584,7 @@ const App: React.FC = () => {
     } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update like status.");
     }
-  }, [currentUser, selectedStory?.id]);
+  }, [currentUser, selectedStory?.id, showAuthView]);
 
   const handleRateStory = useCallback(async (storyId: string, score: number) => {
     if (!currentUser) { showAuthView('login'); return; }
@@ -597,7 +597,7 @@ const App: React.FC = () => {
         setError(err instanceof Error ? err.message : "Failed to submit rating.");
         throw err;
     }
-  }, [currentUser, selectedStory?.id]);
+  }, [currentUser, selectedStory?.id, showAuthView]);
   
   const handleSendMessage = useCallback(async (text: string, receiverId: string) => {
     if (!currentUser) throw new Error("User not logged in.");
