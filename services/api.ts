@@ -75,8 +75,14 @@ async function request<T>(endpoint: string, options: ApiFetchOptions, isMultipar
         throw new Error(errorMessage);
     }
 
+    if (responseText.trim() === '') {
+        // Handle successful responses with an empty body (e.g., 200 OK with no content)
+        // This prevents JSON.parse from failing on an empty string.
+        return null as T;
+    }
+
     try {
-        // If the response was OK, we assume the text is valid JSON.
+        // If the response was OK and not empty, we assume the text is valid JSON.
         return JSON.parse(responseText) as T;
     } catch (e) {
         // This indicates a server error: a successful status code but an invalid JSON body.
