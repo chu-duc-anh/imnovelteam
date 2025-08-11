@@ -1,6 +1,7 @@
 
 
-import React, { useMemo } from 'react';
+
+import React, { useMemo, memo } from 'react';
 import { Story, User } from '../types';
 import RelativeTime from './RelativeTime';
 import { generateFakeStoryStats, toAbsoluteUrl } from '../utils';
@@ -269,4 +270,4 @@ const StoryCard: React.FC<StoryCardProps> = ({
   );
 };
 
-export default StoryCard;
+export default memo(StoryCard);
