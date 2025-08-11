@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Story, User } from '../types';
 import StoryCard from './StoryCard';
 import PaginationControls from './PaginationControls';
@@ -58,4 +58,4 @@ const StoryList: React.FC<StoryListProps> = ({
   );
 };
 
-export default StoryList;
+export default memo(StoryList);
