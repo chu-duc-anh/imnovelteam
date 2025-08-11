@@ -1,5 +1,6 @@
 
-import React from 'react';
+
+import React, { memo } from 'react';
 import { Story, User } from '../types'; // Imported User type
 import StoryCard from './StoryCard';
 
@@ -37,4 +38,4 @@ const FeaturedStorySection: React.FC<FeaturedStorySectionProps> = ({ stories, on
   );
 };
 
-export default FeaturedStorySection;
+export default memo(FeaturedStorySection);
