@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { Story, Volume, StoryChapter, User, ContentBlock, ContentBlockText, ContentBlockImage, Comment } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { generateId, fileToDataUrl, countWordsInContentBlocks } from '../utils'; 
@@ -299,4 +300,4 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   );
 };
 
-export default ChapterView;
+export default memo(ChapterView);
