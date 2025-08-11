@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Story, User } from '../types';
 import StoryList from './StoryList';
 import FeaturedStorySection from './FeaturedStorySection';
@@ -177,4 +177,4 @@ const StoryHub: React.FC<StoryHubProps> = ({
   );
 };
 
-export default StoryHub;
+export default memo(StoryHub);
