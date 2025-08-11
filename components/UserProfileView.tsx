@@ -1,5 +1,6 @@
 
-import React, { useState, useRef } from 'react';
+
+import React, { useState, useRef, memo } from 'react';
 import { User } from '../types';
 import { fileToDataUrl } from '../utils';
 import { DEFAULT_AVATAR_URL } from '../constants';
@@ -222,4 +223,4 @@ const UserProfileView: React.FC<UserProfileViewProps> = ({ currentUser, onUpdate
   );
 };
 
-export default UserProfileView;
+export default memo(UserProfileView);
