@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, memo } from 'react';
 import { Story, Comment, User, Volume, StoryChapter } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import CommentSection from './CommentSection';
@@ -375,4 +376,4 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
   );
 };
 
-export default StoryDetailView;
+export default memo(StoryDetailView);
