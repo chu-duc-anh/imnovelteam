@@ -4,6 +4,7 @@ import LoadingSpinner from '../LoadingSpinner';
 import StructurePanel from './StructurePanel';
 import ContentEditorPanel from './ContentEditorPanel';
 import MetadataPanel from './MetadataPanel';
+import { createText } from '../../constants';
 
 export type SelectedItem = 
   | { type: 'story' }
@@ -18,16 +19,20 @@ interface StoryEditViewProps {
 
 const StoryEditView: React.FC<StoryEditViewProps> = ({ story: initialStory, onSave, onCancel }) => {
   const normalizedInitialStory = useMemo(() => {
-    const volumes = Array.isArray(initialStory.volumes) ? initialStory.volumes : [];
-    // Also ensure each volume has a chapters array to prevent downstream errors
-    const sanitizedVolumes = volumes.map(v => ({
-      ...v,
-      chapters: Array.isArray(v.chapters) ? v.chapters : [],
+    const volumes = (initialStory.volumes || []).map(volume => ({
+      ...volume,
+      chapters: (volume.chapters || []).map(chapter => {
+        const hasValidBlocks = Array.isArray(chapter.contentBlocks) && chapter.contentBlocks.length > 0;
+        return {
+          ...chapter,
+          contentBlocks: hasValidBlocks ? chapter.contentBlocks : [createText('')],
+        };
+      }),
     }));
 
     return {
       ...initialStory,
-      volumes: sanitizedVolumes,
+      volumes,
     };
   }, [initialStory]);
   
@@ -182,6 +187,7 @@ const StoryEditView: React.FC<StoryEditViewProps> = ({ story: initialStory, onSa
         {/* Center Panel: Content Editor */}
         <div className="col-span-12 md:col-span-5 lg:col-span-6 xl:col-span-7 overflow-y-auto bg-primary-100 dark:bg-primary-950">
             <ContentEditorPanel
+                key={selectedChapterForPanel?.id || 'no-chapter-selected'}
                 chapter={selectedChapterForPanel}
                 onUpdateBlocks={handleContentBlocksUpdate}
             />
