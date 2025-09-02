@@ -1,7 +1,6 @@
 
 
-
-import React, { useMemo, memo } from 'react';
+import React, { useMemo } from 'react';
 import { Story, User } from '../types';
 import RelativeTime from './RelativeTime';
 import { generateFakeStoryStats, toAbsoluteUrl } from '../utils';
@@ -36,8 +35,8 @@ const StoryCard: React.FC<StoryCardProps> = ({
     || (!!currentUser?.allyOf && story.creatorId?.id === currentUser.allyOf.id);
 
   if (layout === 'list') {
-    const latestChapters = story.volumes
-      .flatMap(volume => volume.chapters.map(chapter => ({ ...chapter, volumeId: volume.id })))
+    const latestChapters = (story.volumes || [])
+      .flatMap(volume => (volume.chapters || []).map(chapter => ({ ...chapter, volumeId: volume.id })))
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       .slice(0, 3);
       
@@ -99,7 +98,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
 
           <div className="flex flex-col flex-grow">
             <div className="flex flex-wrap gap-1.5 mb-2">
-              {story.genres.slice(0, 5).map((genre) => (
+              {(story.genres || []).slice(0, 5).map((genre) => (
                 <span key={genre} className="text-xs bg-primary-200 dark:bg-primary-700 text-primary-700 dark:text-primary-200 px-2 py-1 rounded-full font-medium">
                   {genre}
                 </span>
@@ -223,7 +222,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
         </div>
         {size === 'normal' && (
           <div className="mb-4 flex flex-wrap gap-2">
-            {story.genres.slice(0, 3).map((genre) => (
+            {(story.genres || []).slice(0, 3).map((genre) => (
               <span key={genre} className="text-xs bg-primary-200 dark:bg-primary-700 text-primary-700 dark:text-primary-200 px-2.5 py-1 rounded-full font-medium">
                 {genre}
               </span>
@@ -270,4 +269,4 @@ const StoryCard: React.FC<StoryCardProps> = ({
   );
 };
 
-export default memo(StoryCard);
+export default StoryCard;
