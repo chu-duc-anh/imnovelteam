@@ -127,6 +127,10 @@ const StoryEditView: React.FC<StoryEditViewProps> = ({ story: initialStory, onSa
         setIsSaving(false);
     }
   };
+  
+  const selectedChapterForPanel = selectedItem.type === 'chapter' 
+    ? editedStory.volumes.find(v => v.id === selectedItem.volumeId)?.chapters.find(c => c.id === selectedItem.id) || null 
+    : null;
 
   return (
     <div className="fixed inset-0 bg-primary-100 dark:bg-primary-950 flex flex-col z-[100]">
@@ -178,7 +182,8 @@ const StoryEditView: React.FC<StoryEditViewProps> = ({ story: initialStory, onSa
         {/* Center Panel: Content Editor */}
         <div className="col-span-12 md:col-span-5 lg:col-span-6 xl:col-span-7 overflow-y-auto bg-primary-100 dark:bg-primary-950">
             <ContentEditorPanel
-                chapter={selectedItem.type === 'chapter' ? editedStory.volumes.find(v => v.id === selectedItem.volumeId)?.chapters.find(c => c.id === selectedItem.id) || null : null}
+                key={selectedItem.type === 'chapter' ? selectedItem.id : 'no-chapter-selected'}
+                chapter={selectedChapterForPanel}
                 onUpdateBlocks={handleContentBlocksUpdate}
             />
         </div>
