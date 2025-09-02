@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo } from 'react';
 import { Story, Comment, User, Volume, StoryChapter } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -219,6 +220,9 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                         <p>Tác giả: <span className="font-semibold text-primary-800 dark:text-primary-300">{story.author}</span></p>
                         {story.translator && (
                             <p>Team dịch: <span className="font-semibold text-primary-800 dark:text-primary-300">{story.translator}</span></p>
+                        )}
+                        {story.country && (
+                            <p>Quốc gia: <span className="font-semibold text-primary-800 dark:text-primary-300">{story.country}</span></p>
                         )}
                     </div>
                     
