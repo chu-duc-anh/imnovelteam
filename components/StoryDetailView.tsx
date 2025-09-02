@@ -1,6 +1,6 @@
 
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Story, Comment, User, Volume, StoryChapter } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import CommentSection from './CommentSection';
@@ -46,7 +46,7 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
     onLoginClick
 }) => {
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
-  const selectedVolume = selectedVolumeId ? story.volumes.find(v => v.id === selectedVolumeId) : null;
+  const selectedVolume = selectedVolumeId ? (story.volumes || []).find(v => v.id === selectedVolumeId) : null;
   const canManageStory = currentUser?.role === 'admin' 
     || (currentUser?.role === 'contractor' && story.creatorId?.id === currentUser.id)
     || (!!currentUser?.allyOf && story.creatorId?.id === currentUser.allyOf.id);
@@ -61,8 +61,8 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
 
   // --- Calculations for Stats Bar ---
   const wordCount = useMemo(() => {
-    return story.volumes.reduce((total, volume) => {
-        return total + volume.chapters.reduce((volTotal, chapter) => {
+    return (story.volumes || []).reduce((total, volume) => {
+        return total + (volume.chapters || []).reduce((volTotal, chapter) => {
             return volTotal + countWordsInContentBlocks(chapter.contentBlocks);
         }, 0);
     }, 0);
@@ -111,8 +111,8 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
 
   const latestChapter = useMemo(() => {
       let latest: { chapter: StoryChapter; volumeId: string } | null = null;
-      story.volumes.forEach(volume => {
-          volume.chapters.forEach(chapter => {
+      (story.volumes || []).forEach(volume => {
+          (volume.chapters || []).forEach(chapter => {
               if (!latest || (chapter.timestamp || 0) > (latest.chapter.timestamp || 0)) {
                   latest = { chapter, volumeId: volume.id };
               }
@@ -225,7 +225,7 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                     <div className="my-6">
                         <h4 className="font-semibold text-primary-700 dark:text-primary-300 mb-2 text-sm uppercase tracking-wider">THỂ LOẠI</h4>
                         <div className="flex flex-wrap gap-2">
-                        {story.genres.map((genre) => (
+                        {(story.genres || []).map((genre) => (
                             <span key={genre} className="bg-primary-200 dark:bg-primary-700 text-primary-700 dark:text-primary-200 px-3 py-1 rounded-full text-sm font-medium shadow-sm">
                             {genre}
                             </span>
@@ -233,11 +233,11 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                         </div>
                     </div>
 
-                    {story.alternativeTitles && story.alternativeTitles.length > 0 && (
+                    {(story.alternativeTitles || []).length > 0 && (
                         <div className="my-6">
                             <h4 className="font-semibold text-primary-700 dark:text-primary-300 mb-2 text-sm uppercase tracking-wider">TÊN KHÁC</h4>
                             <div className="flex flex-wrap gap-2">
-                            {story.alternativeTitles.map((title, index) => (
+                            {(story.alternativeTitles || []).map((title, index) => (
                                 <span key={index} className="bg-primary-200 dark:bg-primary-700 text-primary-700 dark:text-primary-200 px-3 py-1 rounded-full text-sm font-medium shadow-sm">
                                 {title}
                                 </span>
@@ -311,7 +311,7 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
              <div className="mt-8">
                 <h3 className="font-serif text-2xl font-bold text-primary-800 dark:text-primary-200 mb-4">Chương truyện</h3>
                 <div className="space-y-4">
-                    {story.volumes.map((volume) => (
+                    {(story.volumes || []).map((volume) => (
                         <div key={volume.id} className="bg-primary-50 dark:bg-primary-800/60 p-4 rounded-xl shadow-md border border-primary-200/50 dark:border-primary-700/50">
                             <h4 className="font-semibold text-lg text-primary-800 dark:text-primary-200 mb-3 flex items-center gap-2">
                                 {volume.title}
@@ -320,8 +320,8 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                                 )}
                             </h4>
                             <ul className="space-y-2">
-                                {volume.chapters.length > 0 ? (
-                                    volume.chapters.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0)).map(chapter => (
+                                {(volume.chapters || []).length > 0 ? (
+                                    (volume.chapters || []).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0)).map(chapter => (
                                         <li key={chapter.id}>
                                             <button
                                                 onClick={() => onNavigateToChapter(volume.id, chapter.id)}
@@ -376,4 +376,4 @@ const StoryDetailView: React.FC<StoryDetailViewProps> = ({
   );
 };
 
-export default memo(StoryDetailView);
+export default StoryDetailView;
