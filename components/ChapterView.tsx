@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Story, Volume, StoryChapter, User, ContentBlock, ContentBlockText, ContentBlockImage, Comment } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { generateId, fileToDataUrl, countWordsInContentBlocks } from '../utils'; 
@@ -46,9 +46,10 @@ const ChapterView: React.FC<ChapterViewProps> = ({
 }) => {
   const [isChapterListOpen, setIsChapterListOpen] = useState(false);
   const [isScrollButtonVisible, setIsScrollButtonVisible] = useState(false);
-  const currentVolume = story.volumes.find(v => v.id === volumeId);
-  const currentChapterIndex = currentVolume ? currentVolume.chapters.findIndex(ch => ch.id === chapterId) : -1;
-  const chapter = currentVolume && currentChapterIndex !== -1 ? currentVolume.chapters[currentChapterIndex] : null;
+  const currentVolume = (story.volumes || []).find(v => v.id === volumeId);
+  const chaptersInVolume = currentVolume?.chapters || [];
+  const currentChapterIndex = chaptersInVolume.findIndex(ch => ch.id === chapterId);
+  const chapter = currentChapterIndex !== -1 ? chaptersInVolume[currentChapterIndex] : null;
 
   const isValidHttpUrl = (urlString: string): boolean => {
     try { 
@@ -72,8 +73,8 @@ const ChapterView: React.FC<ChapterViewProps> = ({
     });
   }
 
-  const hasPrevChapter = currentVolume ? currentChapterIndex > 0 : false;
-  const hasNextChapter = currentVolume ? currentChapterIndex < currentVolume.chapters.length - 1 : false;
+  const hasPrevChapter = currentChapterIndex > 0;
+  const hasNextChapter = currentChapterIndex < chaptersInVolume.length - 1;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -152,7 +153,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
           </div>
           <div className="flex justify-between items-center border-b border-primary-200 dark:border-primary-800 pb-4">
               <p className="text-sm text-primary-500 dark:text-primary-400">
-                Chapter {currentChapterIndex + 1} of {currentVolume.chapters.length} &bull; {wordCount} words
+                Chapter {currentChapterIndex + 1} of {chaptersInVolume.length} &bull; {wordCount} words
               </p>
               <div className="flex items-center space-x-2">
                 <button
@@ -272,7 +273,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                   </div>
                   {/* List */}
                   <ul className="overflow-y-auto p-2 flex-grow">
-                      {currentVolume.chapters.map((ch, index) => (
+                      {chaptersInVolume.map((ch, index) => (
                           <li key={ch.id}>
                               <button 
                                   onClick={() => {
@@ -300,4 +301,4 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   );
 };
 
-export default memo(ChapterView);
+export default ChapterView;
