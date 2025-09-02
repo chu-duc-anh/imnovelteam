@@ -1,4 +1,5 @@
 
+
 export interface SimplifiedStory {
   id: string;
   title: string;
@@ -48,6 +49,7 @@ export interface Story {
   volumes: Volume[]; // Changed from chapters to volumes
   rating?: number; // e.g., 4.5
   status?: 'Ongoing' | 'Completed' | 'Dropped';
+  country?: string;
   isRecent?: boolean;
   hot?: boolean;
   lastUpdated?: number; // Unix timestamp for when the story was last updated or created
