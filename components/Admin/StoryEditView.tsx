@@ -17,15 +17,29 @@ interface StoryEditViewProps {
 }
 
 const StoryEditView: React.FC<StoryEditViewProps> = ({ story: initialStory, onSave, onCancel }) => {
-  const [editedStory, setEditedStory] = useState<Story>(initialStory);
+  const normalizedInitialStory = useMemo(() => {
+    const volumes = Array.isArray(initialStory.volumes) ? initialStory.volumes : [];
+    // Also ensure each volume has a chapters array to prevent downstream errors
+    const sanitizedVolumes = volumes.map(v => ({
+      ...v,
+      chapters: Array.isArray(v.chapters) ? v.chapters : [],
+    }));
+
+    return {
+      ...initialStory,
+      volumes: sanitizedVolumes,
+    };
+  }, [initialStory]);
+  
+  const [editedStory, setEditedStory] = useState<Story>(normalizedInitialStory);
   const [selectedItem, setSelectedItem] = useState<SelectedItem>({ type: 'story' });
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setEditedStory(initialStory);
+    setEditedStory(normalizedInitialStory);
     setSelectedItem({ type: 'story' });
-  }, [initialStory]);
+  }, [normalizedInitialStory]);
   
   const handleSelectItem = (item: SelectedItem) => {
     setSelectedItem(item);
