@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { StoryChapter, ContentBlock, ContentBlockText, ContentBlockImage } from '../../types';
 import ContentEditableDiv from '../ContentEditableDiv';
 import { generateId, fileToDataUrl } from '../../utils';
@@ -11,6 +11,7 @@ interface ContentEditorPanelProps {
 }
 
 const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpdateBlocks }) => {
+  const [localBlocks, setLocalBlocks] = useState<ContentBlock[]>([]);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const activeEditableDivId = useRef<string | null>(null);
   
@@ -21,10 +22,17 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpda
   }>({ isOpen: false, blockId: null, range: null });
   const [annotationInput, setAnnotationInput] = useState('');
 
+  useEffect(() => {
+    // This effect is crucial. It syncs the internal state with the prop from the parent.
+    // When the user selects a different chapter in StoryEditView, the `chapter` prop changes,
+    // and this effect updates the local state to show the new chapter's content.
+    setLocalBlocks(chapter?.contentBlocks || []);
+  }, [chapter]);
+
+
   const handleBlockChange = (blockId: string, updates: Partial<ContentBlockText | ContentBlockImage>) => {
-    if (!chapter) return;
-    const currentBlocks = chapter.contentBlocks || [];
-    const newBlocks = currentBlocks.map(b => b.id === blockId ? { ...b, ...updates } : b);
+    const newBlocks = localBlocks.map(b => b.id === blockId ? { ...b, ...updates } : b);
+    setLocalBlocks(newBlocks);
     onUpdateBlocks(newBlocks);
   };
   
@@ -38,28 +46,25 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpda
   };
 
   const addBlock = (type: 'text' | 'image', index: number) => {
-    if (!chapter) return;
-    const currentBlocks = chapter.contentBlocks || [];
     const newBlock = type === 'text' ? createText('') : createImage('');
-    const newBlocks = [...currentBlocks];
+    const newBlocks = [...localBlocks];
     newBlocks.splice(index + 1, 0, newBlock);
+    setLocalBlocks(newBlocks);
     onUpdateBlocks(newBlocks);
   };
 
   const deleteBlock = (blockId: string) => {
-    if (!chapter) return;
-    const currentBlocks = chapter.contentBlocks || [];
-    const newBlocks = currentBlocks.filter(b => b.id !== blockId);
+    const newBlocks = localBlocks.filter(b => b.id !== blockId);
+    setLocalBlocks(newBlocks);
     onUpdateBlocks(newBlocks);
   };
   
   const moveBlock = (index: number, direction: 'up' | 'down') => {
-      if (!chapter) return;
-      const currentBlocks = chapter.contentBlocks || [];
-      const newBlocks = [...currentBlocks];
+      const newBlocks = [...localBlocks];
       const targetIndex = direction === 'up' ? index - 1 : index + 1;
       if (targetIndex < 0 || targetIndex >= newBlocks.length) return;
       [newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]];
+      setLocalBlocks(newBlocks);
       onUpdateBlocks(newBlocks);
   };
 
@@ -117,48 +122,30 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpda
     const annotationText = annotationInput.trim();
 
     if (annotationText) {
-      // Sanitize the tooltip text to be used in an attribute
       const sanitizedTooltipText = annotationText.replace(/"/g, '&quot;');
-
-      // Create the main annotation span element
       const span = document.createElement('span');
       span.className = 'annotated-text';
       span.setAttribute('data-tooltip', sanitizedTooltipText);
-
-      // Create the icon element
       const icon = document.createElement('i');
       icon.className = 'annotation-icon';
 
       try {
-        // This is the key change: we manipulate the range object directly instead of using execCommand
-        
-        // Extract the selected content (text and nodes) from the document
         const selectedContent = range.extractContents();
-        
-        // Put the extracted content inside our new span
         span.appendChild(selectedContent);
-        // Add the icon after the content, still inside the span
         span.appendChild(icon);
-
-        // Insert the fully constructed span back into the document where the selection was
         range.insertNode(span);
 
-        // Sync the DOM change back to React's state
         const editor = document.getElementById(`editor-${blockId}`);
         if (editor) {
           handleBlockChange(blockId, { value: editor.innerHTML });
         }
       } catch (e) {
         console.error("Failed to apply annotation:", e);
-        // If something goes wrong, it's good to alert the user or log the error.
       }
     }
-
-    // Close the modal and reset its state
     setAnnotationModal({ isOpen: false, blockId: null, range: null });
     setAnnotationInput('');
   };
-
 
   if (!chapter) {
     return (
@@ -172,19 +159,17 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpda
     );
   }
   
-  const contentBlocks = chapter.contentBlocks || [];
-
   return (
     <div className="p-4 sm:p-6 lg:p-8 h-full">
       <h2 className="text-2xl font-bold font-serif text-primary-800 dark:text-primary-100 mb-1">Trình soạn thảo nội dung</h2>
       <p className="text-sm text-primary-500 dark:text-primary-400 mb-6">Đang sửa nội dung cho: <span className="font-semibold">{chapter.title}</span></p>
 
       <div className="space-y-4">
-        {contentBlocks.map((block, index) => (
+        {localBlocks.map((block, index) => (
           <div key={block.id} className="bg-white dark:bg-primary-900 p-3 rounded-lg border border-primary-200 dark:border-primary-800/80 shadow-sm relative group">
             <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                 <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} className="p-1.5 rounded-md bg-primary-200 dark:bg-primary-700 hover:bg-primary-300 dark:hover:bg-primary-600 disabled:opacity-50"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a.75.75 0 01-.75-.75V4.66L7.03 6.91a.75.75 0 01-1.06-1.06l3.5-3.5a.75.75 0 011.06 0l3.5 3.5a.75.75 0 01-1.06 1.06L10.75 4.66V17.25A.75.75 0 0110 18z" clipRule="evenodd" /></svg></button>
-                <button onClick={() => moveBlock(index, 'down')} disabled={index === contentBlocks.length - 1} className="p-1.5 rounded-md bg-primary-200 dark:bg-primary-700 hover:bg-primary-300 dark:hover:bg-primary-600 disabled:opacity-50"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 2a.75.75 0 01.75.75v12.59l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V2.75A.75.75 0 0110 2z" clipRule="evenodd" /></svg></button>
+                <button onClick={() => moveBlock(index, 'down')} disabled={index === localBlocks.length - 1} className="p-1.5 rounded-md bg-primary-200 dark:bg-primary-700 hover:bg-primary-300 dark:hover:bg-primary-600 disabled:opacity-50"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 2a.75.75 0 01.75.75v12.59l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V2.75A.75.75 0 0110 2z" clipRule="evenodd" /></svg></button>
                 <button onClick={() => deleteBlock(block.id)} className="p-1.5 rounded-md bg-red-100 dark:bg-red-500/20 text-red-500 hover:bg-red-200 dark:hover:bg-red-500/30"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg></button>
             </div>
             {block.type === 'text' && (
@@ -236,13 +221,13 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpda
           </div>
         ))}
          <div className="mt-6 flex justify-center gap-4">
-            <button onClick={() => addBlock('text', contentBlocks.length)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-primary-800 text-primary-700 dark:text-primary-200 hover:bg-primary-50 dark:hover:bg-primary-700 transition-colors border border-primary-300 dark:border-primary-700 shadow-sm">
+            <button onClick={() => addBlock('text', localBlocks.length)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-primary-800 text-primary-700 dark:text-primary-200 hover:bg-primary-50 dark:hover:bg-primary-700 transition-colors border border-primary-300 dark:border-primary-700 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
                 </svg>
                 Thêm văn bản
             </button>
-            <button onClick={() => addBlock('image', contentBlocks.length)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-primary-800 text-primary-700 dark:text-primary-200 hover:bg-primary-50 dark:hover:bg-primary-700 transition-colors border border-primary-300 dark:border-primary-700 shadow-sm">
+            <button onClick={() => addBlock('image', localBlocks.length)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-primary-800 text-primary-700 dark:text-primary-200 hover:bg-primary-50 dark:hover:bg-primary-700 transition-colors border border-primary-300 dark:border-primary-700 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
