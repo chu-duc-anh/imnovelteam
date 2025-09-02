@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Story, Volume, StoryChapter } from '../../types';
 import { SelectedItem } from './StoryEditView';
@@ -114,7 +115,24 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ story, selectedItem, onUp
                 </div>
                 <div><label htmlFor="meta-author" className={labelClasses}>Tác giả</label><input id="meta-author" type="text" defaultValue={story.author} onBlur={e => handleFieldChange('author', e.target.value)} className={inputClasses}/></div>
                 <div><label htmlFor="meta-translator" className={labelClasses}>Tên nhà dịch (Team dịch)</label><input id="meta-translator" type="text" defaultValue={story.translator || ''} onBlur={e => handleFieldChange('translator', e.target.value)} className={inputClasses}/></div>
-                
+                <div>
+                    <label htmlFor="meta-country" className={labelClasses}>Quốc gia</label>
+                    <select
+                        id="meta-country"
+                        value={story.country || ''}
+                        onChange={e => handleFieldChange('country', e.target.value)}
+                        className={inputClasses}
+                    >
+                        <option value="">-- Chọn quốc gia --</option>
+                        <option value="Trung Quốc">Trung Quốc</option>
+                        <option value="Nhật Bản">Nhật Bản</option>
+                        <option value="Hàn Quốc">Hàn Quốc</option>
+                        <option value="Việt Nam">Việt Nam</option>
+                        <option value="Anh">Anh</option>
+                        <option value="Mỹ">Mỹ</option>
+                        <option value="Khác">Khác</option>
+                    </select>
+                </div>
                 <div>
                     <label className={labelClasses}>Tên khác</label>
                     <div className="space-y-2 p-2 bg-primary-50 dark:bg-primary-800/50 rounded-lg border border-primary-200 dark:border-primary-700/50">
