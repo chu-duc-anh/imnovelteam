@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Story, User, Volume, StoryChapter, Comment, ContentBlock, ContentBlockText, ContentBlockImage, ChatThread, LeaderboardUser, SiteSetting, SimplifiedStory } from './types';
 import { createText, createVolume, createChapter, createImage, DEFAULT_AVATAR_URL } from './constants';
@@ -437,6 +438,7 @@ const App: React.FC = () => {
             genres: [],
             alternativeTitles: [],
             description: '',
+            country: '',
             volumes: [createVolume('Volume 1')],
             status: 'Ongoing',
             isRecent: true,
