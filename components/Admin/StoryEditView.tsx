@@ -182,7 +182,6 @@ const StoryEditView: React.FC<StoryEditViewProps> = ({ story: initialStory, onSa
         {/* Center Panel: Content Editor */}
         <div className="col-span-12 md:col-span-5 lg:col-span-6 xl:col-span-7 overflow-y-auto bg-primary-100 dark:bg-primary-950">
             <ContentEditorPanel
-                key={selectedItem.type === 'chapter' ? selectedItem.id : 'no-chapter-selected'}
                 chapter={selectedChapterForPanel}
                 onUpdateBlocks={handleContentBlocksUpdate}
             />
