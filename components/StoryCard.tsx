@@ -1,5 +1,6 @@
 
 
+
 import React, { useMemo } from 'react';
 import { Story, User } from '../types';
 import RelativeTime from './RelativeTime';
@@ -107,6 +108,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
             <div className="text-sm text-primary-500 dark:text-primary-400 my-2 space-y-1">
                 <p className="truncate"><strong>Tác giả:</strong> {story.author}</p>
                 {story.translator && <p className="truncate"><strong>Team dịch:</strong> {story.translator}</p>}
+                {story.country && <p className="truncate"><strong>Quốc gia:</strong> {story.country}</p>}
             </div>
             <p className="text-sm text-primary-600 dark:text-primary-300 line-clamp-2 mb-2 flex-grow">{story.description}</p>
             <div className="mt-auto">
