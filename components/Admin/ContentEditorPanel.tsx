@@ -23,7 +23,8 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpda
 
   const handleBlockChange = (blockId: string, updates: Partial<ContentBlockText | ContentBlockImage>) => {
     if (!chapter) return;
-    const newBlocks = chapter.contentBlocks.map(b => b.id === blockId ? { ...b, ...updates } : b);
+    const currentBlocks = chapter.contentBlocks || [];
+    const newBlocks = currentBlocks.map(b => b.id === blockId ? { ...b, ...updates } : b);
     onUpdateBlocks(newBlocks);
   };
   
@@ -38,21 +39,24 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpda
 
   const addBlock = (type: 'text' | 'image', index: number) => {
     if (!chapter) return;
+    const currentBlocks = chapter.contentBlocks || [];
     const newBlock = type === 'text' ? createText('') : createImage('');
-    const newBlocks = [...chapter.contentBlocks];
+    const newBlocks = [...currentBlocks];
     newBlocks.splice(index + 1, 0, newBlock);
     onUpdateBlocks(newBlocks);
   };
 
   const deleteBlock = (blockId: string) => {
     if (!chapter) return;
-    const newBlocks = chapter.contentBlocks.filter(b => b.id !== blockId);
+    const currentBlocks = chapter.contentBlocks || [];
+    const newBlocks = currentBlocks.filter(b => b.id !== blockId);
     onUpdateBlocks(newBlocks);
   };
   
   const moveBlock = (index: number, direction: 'up' | 'down') => {
       if (!chapter) return;
-      const newBlocks = [...chapter.contentBlocks];
+      const currentBlocks = chapter.contentBlocks || [];
+      const newBlocks = [...currentBlocks];
       const targetIndex = direction === 'up' ? index - 1 : index + 1;
       if (targetIndex < 0 || targetIndex >= newBlocks.length) return;
       [newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]];
@@ -167,6 +171,8 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpda
       </div>
     );
   }
+  
+  const contentBlocks = chapter.contentBlocks || [];
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 h-full">
@@ -174,11 +180,11 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpda
       <p className="text-sm text-primary-500 dark:text-primary-400 mb-6">Đang sửa nội dung cho: <span className="font-semibold">{chapter.title}</span></p>
 
       <div className="space-y-4">
-        {chapter.contentBlocks.map((block, index) => (
+        {contentBlocks.map((block, index) => (
           <div key={block.id} className="bg-white dark:bg-primary-900 p-3 rounded-lg border border-primary-200 dark:border-primary-800/80 shadow-sm relative group">
             <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                 <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} className="p-1.5 rounded-md bg-primary-200 dark:bg-primary-700 hover:bg-primary-300 dark:hover:bg-primary-600 disabled:opacity-50"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a.75.75 0 01-.75-.75V4.66L7.03 6.91a.75.75 0 01-1.06-1.06l3.5-3.5a.75.75 0 011.06 0l3.5 3.5a.75.75 0 01-1.06 1.06L10.75 4.66V17.25A.75.75 0 0110 18z" clipRule="evenodd" /></svg></button>
-                <button onClick={() => moveBlock(index, 'down')} disabled={index === chapter.contentBlocks.length - 1} className="p-1.5 rounded-md bg-primary-200 dark:bg-primary-700 hover:bg-primary-300 dark:hover:bg-primary-600 disabled:opacity-50"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 2a.75.75 0 01.75.75v12.59l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V2.75A.75.75 0 0110 2z" clipRule="evenodd" /></svg></button>
+                <button onClick={() => moveBlock(index, 'down')} disabled={index === contentBlocks.length - 1} className="p-1.5 rounded-md bg-primary-200 dark:bg-primary-700 hover:bg-primary-300 dark:hover:bg-primary-600 disabled:opacity-50"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 2a.75.75 0 01.75.75v12.59l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V2.75A.75.75 0 0110 2z" clipRule="evenodd" /></svg></button>
                 <button onClick={() => deleteBlock(block.id)} className="p-1.5 rounded-md bg-red-100 dark:bg-red-500/20 text-red-500 hover:bg-red-200 dark:hover:bg-red-500/30"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg></button>
             </div>
             {block.type === 'text' && (
@@ -230,13 +236,13 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ chapter, onUpda
           </div>
         ))}
          <div className="mt-6 flex justify-center gap-4">
-            <button onClick={() => addBlock('text', chapter.contentBlocks.length)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-primary-800 text-primary-700 dark:text-primary-200 hover:bg-primary-50 dark:hover:bg-primary-700 transition-colors border border-primary-300 dark:border-primary-700 shadow-sm">
+            <button onClick={() => addBlock('text', contentBlocks.length)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-primary-800 text-primary-700 dark:text-primary-200 hover:bg-primary-50 dark:hover:bg-primary-700 transition-colors border border-primary-300 dark:border-primary-700 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
                 </svg>
                 Thêm văn bản
             </button>
-            <button onClick={() => addBlock('image', chapter.contentBlocks.length)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-primary-800 text-primary-700 dark:text-primary-200 hover:bg-primary-50 dark:hover:bg-primary-700 transition-colors border border-primary-300 dark:border-primary-700 shadow-sm">
+            <button onClick={() => addBlock('image', contentBlocks.length)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-primary-800 text-primary-700 dark:text-primary-200 hover:bg-primary-50 dark:hover:bg-primary-700 transition-colors border border-primary-300 dark:border-primary-700 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
