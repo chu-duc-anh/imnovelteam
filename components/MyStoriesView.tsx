@@ -1,17 +1,18 @@
 
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Story, User } from '../types';
 import StoryCard from './StoryCard';
 
 interface MyStoriesViewProps {
   stories: Story[];
   currentUser: User;
-  onAddNewStory: () => void;
+  onAddNewStory?: () => void;
   onEditStory: (story: Story) => void;
   onDeleteStory: (storyId: string) => void;
   onBack: () => void;
   onSelectStory: (story: Story) => void;
+  viewType: 'my' | 'team';
 }
 
 const MyStoriesView: React.FC<MyStoriesViewProps> = ({
@@ -21,10 +22,23 @@ const MyStoriesView: React.FC<MyStoriesViewProps> = ({
   onEditStory,
   onDeleteStory,
   onBack,
-  onSelectStory
+  onSelectStory,
+  viewType,
 }) => {
 
-  const title = currentUser.role === 'admin' ? 'Quản lý tất cả truyện' : 'Dịch truyện của bạn';
+  const isTeamView = viewType === 'team';
+  
+  const title = isTeamView
+    ? "Giao diện truyện của team"
+    : currentUser.role === 'admin' 
+    ? 'Quản lý tất cả truyện' 
+    : 'Dịch truyện của bạn';
+  
+  const canAddNew = !isTeamView && (currentUser.role === 'admin' || currentUser.role === 'contractor');
+  
+  const emptyStateMessage = isTeamView
+    ? 'Nhà thầu của bạn chưa tạo truyện nào, hoặc bạn chưa được chỉ định làm đồng minh.'
+    : 'Bạn chưa tạo truyện nào. Hãy bắt đầu bằng cách thêm một truyện mới!';
 
   return (
     <div className="max-w-7xl mx-auto my-8 p-4 sm:p-6 md:p-8 bg-primary-100/95 dark:bg-primary-950/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-primary-200/50 dark:border-primary-800/50">
@@ -44,21 +58,23 @@ const MyStoriesView: React.FC<MyStoriesViewProps> = ({
                 {title}
             </h1>
         </div>
-        <button
-          onClick={onAddNewStory}
-          className="mt-4 sm:mt-0 bg-secondary-500 hover:bg-secondary-600 text-white font-semibold py-2.5 px-5 rounded-lg transition-colors duration-300 shadow-lg shadow-secondary-500/20 hover:shadow-secondary-500/40 text-sm focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-primary-900 flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          Thêm truyện mới
-        </button>
+        {canAddNew && (
+          <button
+            onClick={onAddNewStory}
+            className="mt-4 sm:mt-0 bg-secondary-500 hover:bg-secondary-600 text-white font-semibold py-2.5 px-5 rounded-lg transition-colors duration-300 shadow-lg shadow-secondary-500/20 hover:shadow-secondary-500/40 text-sm focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-primary-900 flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Thêm truyện mới
+          </button>
+        )}
       </div>
 
        {stories.length === 0 ? (
          <div className="text-center text-primary-600 dark:text-primary-400 py-16 px-6 bg-white/50 dark:bg-primary-900/50 rounded-xl">
             <h3 className="font-serif text-2xl font-bold mb-2">Không tìm thấy truyện nào</h3>
-            <p>Bạn chưa tạo truyện nào. Hãy bắt đầu bằng cách thêm một truyện mới!</p>
+            <p>{emptyStateMessage}</p>
          </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
