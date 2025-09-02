@@ -1,40 +1,37 @@
 
 
-import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Story, User, Volume, StoryChapter, Comment, ContentBlock, ContentBlockText, ContentBlockImage, ChatThread, LeaderboardUser, SiteSetting, SimplifiedStory } from './types';
 import { createText, createVolume, createChapter, createImage, DEFAULT_AVATAR_URL } from './constants';
 import { generateId, toAbsoluteUrl } from './utils';
 import Navbar from './components/Navbar';
+import StoryList from './components/StoryList';
+import StoryDetailView from './components/StoryDetailView';
 import LoadingSpinner from './components/LoadingSpinner';
 import Modal from './components/Modal';
+import AuthView from './components/Auth/AuthView';
+import StoryEditView from './components/Admin/StoryEditView';
+import UserManagementView from './components/Admin/UserManagementView';
+import MyStoriesView from './components/MyStoriesView';
+import ChapterView from './components/ChapterView'; 
+import UserProfileView from './components/UserProfileView';
 import AdminChatWidget from './components/AdminChatWidget';
 import { authService } from './services/authService';
 import { dataService } from './services/dataService';
 import { chatService } from './services/chatService';
+import ChatView from './components/ChatView';
 import FloatingChatButton from './components/FloatingChatButton';
 import Leaderboard from './components/Leaderboard';
 import StoryHub from './components/StoryHub';
+import AllyManagementView from './components/AllyManagementView';
+import TeamStoriesView from './components/TeamStoriesView';
 import ScrollToTopButton from './components/ScrollToTopButton';
+import SiteSettingsView from './components/Admin/SiteSettingsView';
 import DynamicBackground from './components/DynamicBackground';
+import BackgroundPreviewView from './components/BackgroundPreviewView';
 import SocialLinks from './components/SocialLinks';
 import BackgroundMusicPlayer from './components/BackgroundMusicPlayer';
 import SearchOverlay from './components/SearchOverlay';
-
-// --- Lazy Loaded Components ---
-const StoryList = lazy(() => import('./components/StoryList'));
-const StoryDetailView = lazy(() => import('./components/StoryDetailView'));
-const AuthView = lazy(() => import('./components/Auth/AuthView'));
-const StoryEditView = lazy(() => import('./components/Admin/StoryEditView'));
-const UserManagementView = lazy(() => import('./components/Admin/UserManagementView'));
-const MyStoriesView = lazy(() => import('./components/MyStoriesView'));
-const ChapterView = lazy(() => import('./components/ChapterView')); 
-const UserProfileView = lazy(() => import('./components/UserProfileView'));
-const ChatView = lazy(() => import('./components/ChatView'));
-const AllyManagementView = lazy(() => import('./components/AllyManagementView'));
-const TeamStoriesView = lazy(() => import('./components/TeamStoriesView'));
-const SiteSettingsView = lazy(() => import('./components/Admin/SiteSettingsView'));
-const BackgroundPreviewView = lazy(() => import('./components/BackgroundPreviewView'));
-
 
 const THEME_KEY = 'ai_story_teller_theme';
 const PROSE_SIZE_KEY = 'imnovel_prose_size';
@@ -246,25 +243,25 @@ const App: React.FC = () => {
     isSearchOverlayOpen,
   ]);
   
-  const handleAuthSuccess = useCallback(async (user: User) => {
+  const handleAuthSuccess = async (user: User) => {
      setCurrentUser(user);
      await fetchInitialStaticData(user);
      setCurrentView('mainList');
      setAuthViewProps({ initialMode: 'login', resetToken: null });
-  }, [fetchInitialStaticData]);
+  };
   
-  const handleRegisterSuccess = useCallback((user: User) => {
+  const handleRegisterSuccess = (user: User) => {
      setInfoModal({
         isOpen: true,
         title: "Registration Successful!",
         message: "Your account has been created. Please log in to continue.",
      });
-  }, []);
+  }
   
-  const showAuthView = useCallback((mode: 'login' | 'register') => {
+  const showAuthView = (mode: 'login' | 'register') => {
     setAuthViewProps({ initialMode: mode, resetToken: null });
     setCurrentView('auth');
-  }, []);
+  };
   
   const showMainList = useCallback(() => {
     setCurrentView('mainList');
@@ -290,22 +287,20 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleSelectStoryFromList = useCallback(async (storySummary: Story) => {
-    try {
-        const fullStory = await dataService.getStoryById(storySummary.id);
-        await showStoryDetail(fullStory);
-    } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not load the selected story.');
-    }
-}, [showStoryDetail]);
+  const handleSelectStoryFromList = useCallback((story: Story) => {
+    showStoryDetail(story, null);
+  }, [showStoryDetail]);
 
   const handleSelectStoryFromSearch = useCallback(async (story: SimplifiedStory) => {
     setIsSearchOverlayOpen(false);
+    setIsFetchingList(true); 
     try {
         const fullStory = await dataService.getStoryById(story.id);
-        await showStoryDetail(fullStory);
+        showStoryDetail(fullStory);
     } catch(err) {
         setError(err instanceof Error ? err.message : 'Could not load the selected story.');
+    } finally {
+        setIsFetchingList(false);
     }
   }, [showStoryDetail]);
   
@@ -370,10 +365,10 @@ const App: React.FC = () => {
   }, [currentView]);
 
   const handleSelectVolume = useCallback((volumeId: string | null) => { setSelectedVolumeId(volumeId); setSelectedChapterId(null); window.scrollTo(0,0); }, []);
-  const showChatView = useCallback(() => { if (!currentUser) { showAuthView('login'); return; } setCurrentView('chat'); }, [currentUser, showAuthView]);
+  const showChatView = useCallback(() => { if (!currentUser) { showAuthView('login'); return; } setCurrentView('chat'); }, [currentUser]);
   const handleBackFromChat = useCallback(() => { setCurrentView('mainList'); }, []);
 
-  const showChapterView = useCallback(async (volumeId: string, chapterId: string) => {
+  const showChapterView = useCallback((volumeId: string, chapterId: string) => {
     if (selectedStory) {
       const volume = selectedStory.volumes.find(v => v.id === volumeId);
       if (volume && volume.chapters.find(ch => ch.id === chapterId)) {
@@ -383,7 +378,7 @@ const App: React.FC = () => {
         window.scrollTo(0, 0);
       } else {
         setError(`Chapter or Volume not found. Returning to story details.`);
-        await showStoryDetail(selectedStory, volumeId); 
+        showStoryDetail(selectedStory, volumeId); 
       }
     } else {
       setError(`Story not found. Returning to main list.`);
@@ -403,23 +398,23 @@ const App: React.FC = () => {
     if (nextChapter) { setSelectedChapterId(nextChapter.id); window.scrollTo(0,0); }
   }, [selectedStory, selectedVolumeId, selectedChapterId]);
 
-  const handleChapterSelection = useCallback((chapterId: string) => {
+  const handleChapterSelection = (chapterId: string) => {
     setSelectedChapterId(chapterId);
     window.scrollTo(0, 0);
-  }, []);
+  };
 
-  const handleLogout = useCallback(async () => {
+  const handleLogout = async () => {
     await authService.logout();
     setCurrentUser(null);
     await fetchInitialStaticData(null); 
     showMainList(); 
-  }, [fetchInitialStaticData, showMainList]);
+  };
   
-  const handleUpdatePassword = useCallback(async (oldPassword: string, newPassword: string) => {
+  const handleUpdatePassword = async (oldPassword: string, newPassword: string) => {
     if (!currentUser) throw new Error("Not logged in.");
     await authService.updateUserPassword(oldPassword, newPassword);
     setInfoModal({ isOpen: true, title: "Success", message: "Your password has been updated." });
-  }, [currentUser]);
+  };
   
   const handleStartEditSession = useCallback((story?: Story) => {
     const canCreate = currentUser?.role === 'admin' || currentUser?.role === 'contractor';
@@ -480,13 +475,13 @@ const App: React.FC = () => {
       setHotStories(await dataService.getHotStories());
       setRecentStories(await dataService.getRecentStories());
       setStoryInEditSession(null);
-      await showStoryDetail(savedStory);
+      showStoryDetail(savedStory);
     } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred while saving the story.");
     }
   }, [currentUser, showStoryDetail]);
 
-  const handleDeleteStory = useCallback((storyId: string) => {
+  const handleDeleteStory = (storyId: string) => {
      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'contractor' && !currentUser.allyOf)) { setError("You are not authorized."); return; }
      const storyToDelete = paginatedStories.find(s=>s.id === storyId) || managementStories.find(s => s.id === storyId);
      if (!storyToDelete) { setError("Story not found for deletion."); return; }
@@ -523,7 +518,7 @@ const App: React.FC = () => {
         setConfirmationModal(null);
       }
     });
-  }, [currentUser, paginatedStories, managementStories, currentView, currentPage, statusFilter, genreFilter, showMyStories, showTeamStories, selectedStory, showMainList]);
+  };
 
   const handleAddComment = useCallback(async (storyId: string, text: string, parentId: string | null = null, chapterId: string | null = null) => {
     if (!currentUser) { setError("You must be logged in to comment."); throw new Error("User not logged in."); }
@@ -545,7 +540,7 @@ const App: React.FC = () => {
     if (!currentUser) { showAuthView('login'); return; }
     const updatedComment = await dataService.toggleCommentLike(commentId);
     setComments(prev => prev.map(c => c.id === commentId ? updatedComment : c));
-  }, [currentUser, showAuthView]);
+  }, [currentUser]);
 
   const handleDeleteComment = useCallback((commentId: string, storyId: string) => {
     setConfirmationModal({
@@ -578,7 +573,7 @@ const App: React.FC = () => {
     } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update bookmark.");
     }
-  }, [currentUser, selectedStory?.id, showAuthView]);
+  }, [currentUser, selectedStory?.id]);
 
   const handleToggleStoryLike = useCallback(async (storyId: string) => {
     if (!currentUser) { showAuthView('login'); return; }
@@ -589,7 +584,7 @@ const App: React.FC = () => {
     } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update like status.");
     }
-  }, [currentUser, selectedStory?.id, showAuthView]);
+  }, [currentUser, selectedStory?.id]);
 
   const handleRateStory = useCallback(async (storyId: string, score: number) => {
     if (!currentUser) { showAuthView('login'); return; }
@@ -602,21 +597,21 @@ const App: React.FC = () => {
         setError(err instanceof Error ? err.message : "Failed to submit rating.");
         throw err;
     }
-  }, [currentUser, selectedStory?.id, showAuthView]);
+  }, [currentUser, selectedStory?.id]);
   
-  const handleSendMessage = useCallback(async (text: string, receiverId: string) => {
+  const handleSendMessage = async (text: string, receiverId: string) => {
     if (!currentUser) throw new Error("User not logged in.");
     await chatService.sendMessage(text, receiverId);
     setChatThreads(await chatService.getThreads());
-  }, [currentUser]);
+  };
   
-  const handleMarkMessagesAsRead = useCallback(async (threadUserId: string) => {
+  const handleMarkMessagesAsRead = async (threadUserId: string) => {
     if (!currentUser) return;
     await chatService.markMessagesAsRead(threadUserId);
     setChatThreads(await chatService.getThreads());
-  }, [currentUser]);
+  };
   
-  const handleDeleteThread = useCallback((threadId: string) => {
+  const handleDeleteThread = (threadId: string) => {
     if (currentUser?.role !== 'admin') {
       setError("You are not authorized to delete conversations.");
       return;
@@ -641,15 +636,15 @@ const App: React.FC = () => {
             }
         },
     });
-  }, [currentUser, chatThreads]);
+  };
 
-  const handleUpdateAvatar = useCallback(async (newAvatarDataUrl: string) => {
+  const handleUpdateAvatar = async (newAvatarDataUrl: string) => {
     if (!currentUser) throw new Error("User not logged in.");
     const updatedUser = await authService.updateUserAvatar(currentUser.id, newAvatarDataUrl);
     setCurrentUser(updatedUser);
-  }, [currentUser]);
+  };
   
-  const handleUpdateRace = useCallback(async (newRace: string) => {
+  const handleUpdateRace = async (newRace: string) => {
     if (!currentUser) throw new Error("User not logged in.");
     if (currentUser.race === newRace) return;
     setConfirmationModal({
@@ -665,9 +660,9 @@ const App: React.FC = () => {
         setInfoModal({ isOpen: true, title: "Đã đổi chủng loài", message: `Chủng loài của bạn đã được cập nhật thành ${newRace}.` });
       },
     });
-  }, [currentUser]);
+  };
   
-  const handleLeaveAllyTeam = useCallback(() => {
+  const handleLeaveAllyTeam = () => {
     if (!currentUser || !currentUser.allyOf) return;
     setConfirmationModal({
         isOpen: true,
@@ -686,9 +681,9 @@ const App: React.FC = () => {
             }
         },
     });
-  }, [currentUser]);
+  };
 
-  const handleSaveSiteSettings = useCallback(async (settingsToSave: Omit<SiteSetting, 'id'>[]) => {
+  const handleSaveSiteSettings = async (settingsToSave: Omit<SiteSetting, 'id'>[]) => {
       if (currentUser?.role !== 'admin') {
           setError("You are not authorized to change site settings.");
           return;
@@ -701,16 +696,16 @@ const App: React.FC = () => {
       } catch (err) {
           setError(err instanceof Error ? err.message : "Failed to save settings.");
       }
-  }, [currentUser]);
+  };
 
-  const toggleTheme = useCallback(() => setTheme(prev => (prev === 'light' ? 'dark' : 'light')), []);
-  const toggleMusic = useCallback(() => setIsMusicPlaying(prev => !prev), []);
-  const handleCloseErrorModal = useCallback(() => setError(null), []);
-  const handleCloseInfoModal = useCallback(() => setInfoModal(null), []);
-  const handleCloseConfirmationModal = useCallback(() => setConfirmationModal(null), []);
-  const handleConfirmModalAction = useCallback(() => { if (confirmationModal) confirmationModal.onConfirm(); }, [confirmationModal]);
+  const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+  const toggleMusic = () => setIsMusicPlaying(prev => !prev);
+  const handleCloseErrorModal = () => setError(null);
+  const handleCloseInfoModal = () => setInfoModal(null);
+  const handleCloseConfirmationModal = () => setConfirmationModal(null);
+  const handleConfirmModalAction = () => { if (confirmationModal) confirmationModal.onConfirm(); };
 
-  const handleGenreFilterChange = useCallback((genre: string) => {
+  const handleGenreFilterChange = (genre: string) => {
     if (genre === '') {
       setGenreFilter({});
       return;
@@ -729,9 +724,9 @@ const App: React.FC = () => {
       }
       return newFilter;
     });
-  }, []);
+  };
   
-  const handleProseSizeChange = useCallback((direction: 'increase' | 'decrease') => {
+  const handleProseSizeChange = (direction: 'increase' | 'decrease') => {
     setProseSizeClass(currentClass => {
         const currentIndex = PROSE_CLASSES.indexOf(currentClass);
         if (direction === 'increase') {
@@ -742,14 +737,14 @@ const App: React.FC = () => {
             return PROSE_CLASSES[newIndex];
         }
     });
-  }, []);
+  };
   
-  const handlePageChange = useCallback((page: number) => {
+  const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
       window.scrollTo(0,0);
     }
-  }, [totalPages]);
+  };
   
   const allGenres = useMemo(() => {
     const genreSet = new Set<string>();
@@ -777,28 +772,22 @@ const App: React.FC = () => {
   
   const viewsWithoutAppChrome: View[] = ['auth', 'storyEdit', 'chat', 'backgroundPreview'];
   const hasAppChrome = !viewsWithoutAppChrome.includes(currentView);
-  
-  const suspenseFallback = (
-    <div className="flex items-center justify-center py-20">
-      <LoadingSpinner size="lg" message="Loading..." />
-    </div>
-  );
 
   const renderView = () => {
     switch (currentView) {
       case 'mainList': return isFetchingList && paginatedStories.length === 0 ? <LoadingSpinner size="lg" message="Fetching stories..."/> : <StoryHub hotStories={hotStories} recentStories={recentStories} paginatedStories={paginatedStories} allGenres={allGenres} genreFilter={genreFilter} statusFilter={statusFilter} currentUser={currentUser} onSelectStory={handleSelectStoryFromList} onGenreChange={handleGenreFilterChange} onStatusChange={setStatusFilter} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />;
-      case 'storyDetail': return selectedStory ? <Suspense fallback={suspenseFallback}><StoryDetailView story={selectedStory} selectedVolumeId={selectedVolumeId} onSelectVolume={handleSelectVolume} onBackToMainList={showMainList} onNavigateToChapter={showChapterView} comments={selectedStoryComments} onAddComment={(storyId, text, parentId) => handleAddComment(storyId, text, parentId, null)} onToggleCommentLike={handleToggleCommentLike} currentUser={currentUser} onDeleteComment={(commentId) => handleDeleteComment(commentId, selectedStory.id)} onTogglePinComment={handleTogglePinComment} onEditStory={handleStartEditSession} onToggleBookmark={handleToggleBookmark} onToggleLike={handleToggleStoryLike} onRateStory={handleRateStory} onLoginClick={() => showAuthView('login')} /></Suspense> : (showMainList(), null);
-      case 'chapterView': return selectedStory && selectedVolumeId && selectedChapterId ? <Suspense fallback={suspenseFallback}><ChapterView story={selectedStory} volumeId={selectedVolumeId} chapterId={selectedChapterId} comments={selectedChapterComments} onNavigateChapter={navigateChapterInView} onGoToStoryDetail={async (_, volId) => await showStoryDetail(selectedStory, volId)} currentUser={currentUser} onAddComment={handleAddComment} onDeleteComment={(commentId) => handleDeleteComment(commentId, selectedStory.id)} onToggleCommentLike={handleToggleCommentLike} onTogglePinComment={handleTogglePinComment} onLoginClick={() => showAuthView('login')} proseSizeClass={proseSizeClass} onProseSizeChange={handleProseSizeChange} onSelectChapter={handleChapterSelection}/></Suspense> : (selectedStory ? showStoryDetail(selectedStory, selectedVolumeId) : showMainList(), null);
-      case 'userProfile': return currentUser ? <Suspense fallback={suspenseFallback}><UserProfileView currentUser={currentUser} onUpdateAvatar={handleUpdateAvatar} onUpdateRace={handleUpdateRace} onBack={showMainList} theme={theme} onUpdatePassword={handleUpdatePassword} onLeaveAllyTeam={handleLeaveAllyTeam} /></Suspense> : (showMainList(), null);
-      case 'userManagement': return currentUser?.role === 'admin' ? <Suspense fallback={suspenseFallback}><UserManagementView currentUser={currentUser} onBack={showMainList}/></Suspense> : (showMainList(), null);
-      case 'myStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser ? <Suspense fallback={suspenseFallback}><MyStoriesView stories={managementStories} currentUser={currentUser} onAddNewStory={() => handleStartEditSession()} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /></Suspense> : (showMainList(), null));
-      case 'allyManagement': return currentUser?.role === 'contractor' ? <Suspense fallback={suspenseFallback}><AllyManagementView currentUser={currentUser} onBack={showMainList}/></Suspense> : (showMainList(), null);
-      case 'teamStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser?.allyOf ? <Suspense fallback={suspenseFallback}><TeamStoriesView stories={managementStories} currentUser={currentUser} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /></Suspense> : (showMainList(), null));
-      case 'chat': return currentUser ? <Suspense fallback={suspenseFallback}><ChatView currentUser={currentUser} chatThreads={chatThreads} onSendMessage={handleSendMessage} onMarkMessagesAsRead={handleMarkMessagesAsRead} onDeleteThread={handleDeleteThread} onBack={handleBackFromChat}/></Suspense> : (showMainList(), null);
-      case 'siteSettings': return currentUser?.role === 'admin' ? <Suspense fallback={suspenseFallback}><SiteSettingsView initialSettings={siteSettings} onSave={handleSaveSiteSettings} onBack={showMainList} onShowBackgroundPreview={handleShowBackgroundPreview} /></Suspense> : (showMainList(), null);
-      case 'backgroundPreview': return <Suspense fallback={suspenseFallback}><BackgroundPreviewView onBack={() => setCurrentView(previousView)} theme={theme} onToggleTheme={toggleTheme} /></Suspense>;
-      case 'auth': return <Suspense fallback={suspenseFallback}><AuthView {...authViewProps} onBack={showMainList} onLoginSuccess={handleAuthSuccess} onRegisterSuccess={handleRegisterSuccess} siteSettings={siteSettings} /></Suspense>;
-      case 'storyEdit': return storyInEditSession ? <Suspense fallback={suspenseFallback}><StoryEditView story={storyInEditSession} onSave={handleSaveEditedStory} onCancel={handleCancelEditSession} /></Suspense> : (showMainList(), null);
+      case 'storyDetail': return selectedStory ? <StoryDetailView story={selectedStory} selectedVolumeId={selectedVolumeId} onSelectVolume={handleSelectVolume} onBackToMainList={showMainList} onNavigateToChapter={showChapterView} comments={selectedStoryComments} onAddComment={(storyId, text, parentId) => handleAddComment(storyId, text, parentId, null)} onToggleCommentLike={handleToggleCommentLike} currentUser={currentUser} onDeleteComment={(commentId) => handleDeleteComment(commentId, selectedStory.id)} onTogglePinComment={handleTogglePinComment} onEditStory={handleStartEditSession} onToggleBookmark={handleToggleBookmark} onToggleLike={handleToggleStoryLike} onRateStory={handleRateStory} onLoginClick={() => showAuthView('login')} /> : (showMainList(), null);
+      case 'chapterView': return selectedStory && selectedVolumeId && selectedChapterId ? <ChapterView story={selectedStory} volumeId={selectedVolumeId} chapterId={selectedChapterId} comments={selectedChapterComments} onNavigateChapter={navigateChapterInView} onGoToStoryDetail={(_, volId) => showStoryDetail(selectedStory, volId)} currentUser={currentUser} onAddComment={handleAddComment} onDeleteComment={(commentId) => handleDeleteComment(commentId, selectedStory.id)} onToggleCommentLike={handleToggleCommentLike} onTogglePinComment={handleTogglePinComment} onLoginClick={() => showAuthView('login')} proseSizeClass={proseSizeClass} onProseSizeChange={handleProseSizeChange} onSelectChapter={handleChapterSelection}/> : (selectedStory ? showStoryDetail(selectedStory, selectedVolumeId) : showMainList(), null);
+      case 'userProfile': return currentUser ? <UserProfileView currentUser={currentUser} onUpdateAvatar={handleUpdateAvatar} onUpdateRace={handleUpdateRace} onBack={showMainList} theme={theme} onUpdatePassword={handleUpdatePassword} onLeaveAllyTeam={handleLeaveAllyTeam} /> : (showMainList(), null);
+      case 'userManagement': return currentUser?.role === 'admin' ? <UserManagementView currentUser={currentUser} onBack={showMainList}/> : (showMainList(), null);
+      case 'myStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser ? <MyStoriesView stories={managementStories} currentUser={currentUser} onAddNewStory={() => handleStartEditSession()} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} viewType="my" /> : (showMainList(), null));
+      case 'allyManagement': return currentUser?.role === 'contractor' ? <AllyManagementView currentUser={currentUser} onBack={showMainList}/> : (showMainList(), null);
+      case 'teamStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser?.allyOf ? <TeamStoriesView stories={managementStories} currentUser={currentUser} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /> : (showMainList(), null));
+      case 'chat': return currentUser ? <ChatView currentUser={currentUser} chatThreads={chatThreads} onSendMessage={handleSendMessage} onMarkMessagesAsRead={handleMarkMessagesAsRead} onDeleteThread={handleDeleteThread} onBack={handleBackFromChat}/> : (showMainList(), null);
+      case 'siteSettings': return currentUser?.role === 'admin' ? <SiteSettingsView initialSettings={siteSettings} onSave={handleSaveSiteSettings} onBack={showMainList} onShowBackgroundPreview={handleShowBackgroundPreview} /> : (showMainList(), null);
+      case 'backgroundPreview': return <BackgroundPreviewView onBack={() => setCurrentView(previousView)} theme={theme} onToggleTheme={toggleTheme} />;
+      case 'auth': return <AuthView {...authViewProps} onBack={showMainList} onLoginSuccess={handleAuthSuccess} onRegisterSuccess={handleRegisterSuccess} siteSettings={siteSettings} />;
+      case 'storyEdit': return storyInEditSession ? <StoryEditView story={storyInEditSession} onSave={handleSaveEditedStory} onCancel={handleCancelEditSession} /> : (showMainList(), null);
       default: return null;
     }
   };
