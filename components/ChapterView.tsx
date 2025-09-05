@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Story, Volume, StoryChapter, User, ContentBlock, ContentBlockText, ContentBlockImage, Comment } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { generateId, fileToDataUrl, countWordsInContentBlocks } from '../utils'; 
@@ -23,6 +23,7 @@ interface ChapterViewProps {
   proseSizeClass: string;
   onProseSizeChange: (direction: 'increase' | 'decrease') => void;
   onSelectChapter: (chapterId: string) => void;
+  onToggleBookmark: (storyId: string) => void;
 }
 
 const PROSE_CLASSES = ['prose-sm', 'prose-base', 'prose-lg', 'prose-xl', 'prose-2xl', 'prose-3xl', 'prose-4xl'];
@@ -43,13 +44,20 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   proseSizeClass,
   onProseSizeChange,
   onSelectChapter,
+  onToggleBookmark,
 }) => {
   const [isChapterListOpen, setIsChapterListOpen] = useState(false);
   const [isScrollButtonVisible, setIsScrollButtonVisible] = useState(false);
-  const currentVolume = (story.volumes || []).find(v => v.id === volumeId);
-  const chaptersInVolume = currentVolume?.chapters || [];
-  const currentChapterIndex = chaptersInVolume.findIndex(ch => ch.id === chapterId);
-  const chapter = currentChapterIndex !== -1 ? chaptersInVolume[currentChapterIndex] : null;
+  const currentVolume = story.volumes.find(v => v.id === volumeId);
+  const currentChapterIndex = currentVolume ? currentVolume.chapters.findIndex(ch => ch.id === chapterId) : -1;
+  const chapter = currentVolume && currentChapterIndex !== -1 ? currentVolume.chapters[currentChapterIndex] : null;
+
+  const isBookmarked = useMemo(() => !!currentUser && !!story.bookmarks?.includes(currentUser.id), [currentUser, story.bookmarks]);
+
+  const handleBookmarkClick = () => {
+    if (!currentUser) { onLoginClick(); return; }
+    onToggleBookmark(story.id);
+  };
 
   const isValidHttpUrl = (urlString: string): boolean => {
     try { 
@@ -73,8 +81,8 @@ const ChapterView: React.FC<ChapterViewProps> = ({
     });
   }
 
-  const hasPrevChapter = currentChapterIndex > 0;
-  const hasNextChapter = currentChapterIndex < chaptersInVolume.length - 1;
+  const hasPrevChapter = currentVolume ? currentChapterIndex > 0 : false;
+  const hasNextChapter = currentVolume ? currentChapterIndex < currentVolume.chapters.length - 1 : false;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -128,7 +136,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   const currentBlocksToRender = initializeBlocks(chapter.contentBlocks);
   const wordCount = countWordsInContentBlocks(currentBlocksToRender);
   
-  const baseFontButtonClass = "w-12 h-10 flex items-center justify-center text-lg font-bold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500 dark:focus:ring-offset-primary-900 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-px";
+  const baseFontButtonClass = "w-12 h-10 flex items-center justify-center text-lg font-bold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-secondary-500 dark:focus:ring-offset-primary-900 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-px";
 
   const decreaseButtonClass = `${baseFontButtonClass} border-2 border-primary-600 dark:border-primary-400 text-primary-700 dark:text-primary-300 bg-transparent hover:bg-primary-600/10 dark:hover:bg-primary-400/10`;
   
@@ -153,9 +161,25 @@ const ChapterView: React.FC<ChapterViewProps> = ({
           </div>
           <div className="flex justify-between items-center border-b border-primary-200 dark:border-primary-800 pb-4">
               <p className="text-sm text-primary-500 dark:text-primary-400">
-                Chapter {currentChapterIndex + 1} of {chaptersInVolume.length} &bull; {wordCount} words
+                Chapter {currentChapterIndex + 1} of {currentVolume.chapters.length} &bull; {wordCount} words
               </p>
               <div className="flex items-center space-x-2">
+                 <button
+                    onClick={handleBookmarkClick}
+                    className={`h-10 px-3 flex items-center justify-center rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500 dark:focus:ring-offset-primary-900 ${
+                        isBookmarked 
+                        ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' 
+                        : 'bg-primary-200 dark:bg-primary-800 hover:bg-primary-300 dark:hover:bg-primary-700'
+                    }`}
+                    aria-label={isBookmarked ? 'Bỏ theo dõi truyện' : 'Theo dõi truyện'}
+                    title={isBookmarked ? 'Bỏ theo dõi truyện' : 'Theo dõi truyện'}
+                >
+                    {isBookmarked ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                    )}
+                </button>
                 <button
                   onClick={() => onProseSizeChange('decrease')}
                   disabled={proseSizeClass === PROSE_CLASSES[0]}
@@ -176,7 +200,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
           </div>
         </div>
 
-        <article>
+        <article className="no-copy">
           <div className={`prose dark:prose-invert max-w-none prose-headings:font-serif prose-img:rounded-xl prose-img:shadow-xl prose-img:border prose-img:border-primary-200 dark:prose-img:border-primary-700 prose-img:max-h-[75vh] ${proseSizeClass}`}>
             {currentBlocksToRender.length > 0 ? currentBlocksToRender.map((block) => (
               <div key={block.id} className={`my-2`}>
@@ -273,7 +297,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                   </div>
                   {/* List */}
                   <ul className="overflow-y-auto p-2 flex-grow">
-                      {chaptersInVolume.map((ch, index) => (
+                      {currentVolume.chapters.map((ch, index) => (
                           <li key={ch.id}>
                               <button 
                                   onClick={() => {
