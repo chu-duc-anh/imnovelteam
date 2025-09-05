@@ -54,6 +54,10 @@ export const dataService = {
     return api.get<Story[]>('/stories/recent');
   },
   
+  async getBookmarkedStories(): Promise<Story[]> {
+    return api.get<Story[]>('/stories/me/bookmarks');
+  },
+  
   async checkStoryTitleAvailability(title: string, excludeId?: string): Promise<boolean> {
       const payload: { title: string; excludeId?: string } = { title };
       if (excludeId) {
