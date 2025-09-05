@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { DEFAULT_AVATAR_URL } from '../constants';
 import UserProfilePopover from './UserProfilePopover'; 
@@ -19,6 +19,7 @@ interface NavbarProps {
   onShowTeamStories: () => void;
   onUpdateAvatar: (newAvatarDataUrl: string) => Promise<void>;
   onShowSiteSettings: () => void;
+  onShowBookmarkedStories: () => void;
   isMusicPlaying: boolean;
   onToggleMusic: () => void;
 }
@@ -39,6 +40,7 @@ const Navbar: React.FC<NavbarProps> = ({
   onShowTeamStories,
   onUpdateAvatar,
   onShowSiteSettings,
+  onShowBookmarkedStories,
   isMusicPlaying,
   onToggleMusic,
 }) => {
@@ -133,7 +135,7 @@ const Navbar: React.FC<NavbarProps> = ({
                     <button onClick={() => setIsProfilePopoverOpen(prev => !prev)} className="rounded-full flex items-center focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:ring-offset-2 focus:ring-offset-primary-100 dark:focus:ring-offset-primary-950" aria-label="Open user menu" aria-expanded={isProfilePopoverOpen} aria-haspopup="true">
                         <img src={currentUser.picture || DEFAULT_AVATAR_URL} alt="User avatar" className={`w-10 h-10 rounded-full object-cover border-2 border-primary-300 dark:border-primary-700 hover:border-secondary-400 transition-colors duration-300 ${isArchangel ? 'archangel-avatar-halo' : ''}`}/>
                     </button>
-                    {isProfilePopoverOpen && <UserProfilePopover currentUser={currentUser} onLogout={onLogoutClick} onShowUserProfile={onShowUserProfile} onShowUserManagement={onShowUserManagement} onShowMyStories={onShowMyStories} onShowAllyManagement={onShowAllyManagement} onShowTeamStories={onShowTeamStories} onShowSiteSettings={onShowSiteSettings} onUpdateAvatar={onUpdateAvatar} onClose={() => setIsProfilePopoverOpen(false)} theme={theme}/>}
+                    {isProfilePopoverOpen && <UserProfilePopover currentUser={currentUser} onLogout={onLogoutClick} onShowUserProfile={onShowUserProfile} onShowUserManagement={onShowUserManagement} onShowMyStories={onShowMyStories} onShowAllyManagement={onShowAllyManagement} onShowTeamStories={onShowTeamStories} onShowSiteSettings={onShowSiteSettings} onUpdateAvatar={onUpdateAvatar} onClose={() => setIsProfilePopoverOpen(false)} theme={theme} onShowBookmarkedStories={onShowBookmarkedStories} />}
                 </div>
                 <span className="text-sm font-medium text-primary-700 dark:text-primary-300 hidden md:block">Xin chào, {currentUser.name || currentUser.username}</span>
               </div>
@@ -169,6 +171,7 @@ const Navbar: React.FC<NavbarProps> = ({
               </div>
               <div className="border-t border-primary-200 dark:border-primary-700 my-2"></div>
               <button onClick={() => handleMobileLinkClick(onShowUserProfile)} className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-primary-700 dark:text-primary-200 hover:bg-primary-200 dark:hover:bg-primary-800">Hồ sơ</button>
+              <button onClick={() => handleMobileLinkClick(onShowBookmarkedStories)} className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-primary-700 dark:text-primary-200 hover:bg-primary-200 dark:hover:bg-primary-800">Truyện đã theo dõi</button>
                {canManageStories && <button onClick={() => handleMobileLinkClick(onShowMyStories)} className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-primary-700 dark:text-primary-200 hover:bg-primary-200 dark:hover:bg-primary-800">Dịch truyện của bạn</button>}
                {currentUser.allyOf && <button onClick={() => handleMobileLinkClick(onShowTeamStories)} className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-primary-700 dark:text-primary-200 hover:bg-primary-200 dark:hover:bg-primary-800">Giao diện truyện của team</button>}
                {currentUser.role === 'contractor' && <button onClick={() => handleMobileLinkClick(onShowAllyManagement)} className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-primary-700 dark:text-primary-200 hover:bg-primary-200 dark:hover:bg-primary-800">Quản lý đồng minh</button>}
@@ -188,4 +191,4 @@ const Navbar: React.FC<NavbarProps> = ({
   );
 };
 
-export default memo(Navbar);
+export default Navbar;
