@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef } from 'react';
 import { User } from '../types';
 import { fileToDataUrl } from '../utils';
@@ -17,9 +18,10 @@ interface UserProfilePopoverProps {
     onShowAllyManagement?: () => void;
     onShowTeamStories?: () => void;
     onShowSiteSettings?: () => void;
+    onShowBookmarkedStories?: () => void;
 }
 
-const UserProfilePopover: React.FC<UserProfilePopoverProps> = ({ currentUser, onLogout, onUpdateAvatar, onClose, onShowUserProfile, onShowUserManagement, onShowMyStories, onShowAllyManagement, onShowTeamStories, onShowSiteSettings }) => {
+const UserProfilePopover: React.FC<UserProfilePopoverProps> = ({ currentUser, onLogout, onUpdateAvatar, onClose, onShowUserProfile, onShowUserManagement, onShowMyStories, onShowAllyManagement, onShowTeamStories, onShowSiteSettings, onShowBookmarkedStories }) => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +104,20 @@ const UserProfilePopover: React.FC<UserProfilePopoverProps> = ({ currentUser, on
                         </svg>
                         View Profile
                     </button>}
+                    {onShowBookmarkedStories && (
+                        <button
+                            onClick={() => {
+                                onShowBookmarkedStories();
+                                onClose();
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm text-primary-700 dark:text-primary-200 hover:bg-primary-200 dark:hover:bg-primary-800 rounded-md transition-colors flex items-center"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                            </svg>
+                            Truyện đã theo dõi
+                        </button>
+                    )}
                     {canManageStories && onShowMyStories && (
                         <button
                             onClick={() => {
