@@ -1,6 +1,5 @@
 
 
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Story, User, Volume, StoryChapter, Comment, ContentBlock, ContentBlockText, ContentBlockImage, ChatThread, LeaderboardUser, SiteSetting, SimplifiedStory } from './types';
 import { createText, createVolume, createChapter, createImage, DEFAULT_AVATAR_URL } from './constants';
@@ -33,12 +32,13 @@ import BackgroundPreviewView from './components/BackgroundPreviewView';
 import SocialLinks from './components/SocialLinks';
 import BackgroundMusicPlayer from './components/BackgroundMusicPlayer';
 import SearchOverlay from './components/SearchOverlay';
+import BookmarkedStoriesView from './components/BookmarkedStoriesView';
 
 const THEME_KEY = 'ai_story_teller_theme';
 const PROSE_SIZE_KEY = 'imnovel_prose_size';
 const STORIES_PER_PAGE = 8;
 
-type View = 'mainList' | 'storyDetail' | 'chapterView' | 'userProfile' | 'userManagement' | 'chat' | 'auth' | 'storyEdit' | 'myStories' | 'allyManagement' | 'teamStories' | 'siteSettings' | 'backgroundPreview';
+type View = 'mainList' | 'storyDetail' | 'chapterView' | 'userProfile' | 'userManagement' | 'chat' | 'auth' | 'storyEdit' | 'myStories' | 'allyManagement' | 'teamStories' | 'siteSettings' | 'backgroundPreview' | 'bookmarkedStories';
 type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
 type Theme = 'light' | 'dark';
 type StatusFilter = 'all' | 'Ongoing' | 'Completed' | 'Dropped';
@@ -50,6 +50,7 @@ const App: React.FC = () => {
   const [hotStories, setHotStories] = useState<Story[]>([]);
   const [recentStories, setRecentStories] = useState<Story[]>([]);
   const [managementStories, setManagementStories] = useState<Story[]>([]);
+  const [bookmarkedStories, setBookmarkedStories] = useState<Story[]>([]);
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([]);
@@ -330,6 +331,21 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   }, [currentUser]);
 
+  const showBookmarkedStories = useCallback(async () => {
+    if (!currentUser) return;
+    setIsFetchingList(true);
+    try {
+      const data = await dataService.getBookmarkedStories();
+      setBookmarkedStories(data);
+      setCurrentView('bookmarkedStories');
+      window.scrollTo(0, 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load bookmarked stories.");
+    } finally {
+      setIsFetchingList(false);
+    }
+  }, [currentUser]);
+
   const showTeamStories = useCallback(async () => {
     if (!currentUser?.allyOf) return;
     setIsFetchingList(true);
@@ -438,7 +454,6 @@ const App: React.FC = () => {
             genres: [],
             alternativeTitles: [],
             description: '',
-            country: '',
             volumes: [createVolume('Volume 1')],
             status: 'Ongoing',
             isRecent: true,
@@ -572,10 +587,17 @@ const App: React.FC = () => {
         const updatedStory = await dataService.toggleBookmark(storyId);
         if (selectedStory?.id === storyId) setSelectedStory(updatedStory);
         setPaginatedStories(prev => prev.map(s => s.id === storyId ? updatedStory : s));
+        setHotStories(prev => prev.map(s => s.id === storyId ? updatedStory : s));
+        setRecentStories(prev => prev.map(s => s.id === storyId ? updatedStory : s));
+
+        if (currentView === 'bookmarkedStories') {
+            const data = await dataService.getBookmarkedStories();
+            setBookmarkedStories(data);
+        }
     } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update bookmark.");
     }
-  }, [currentUser, selectedStory?.id]);
+  }, [currentUser, selectedStory?.id, currentView]);
 
   const handleToggleStoryLike = useCallback(async (storyId: string) => {
     if (!currentUser) { showAuthView('login'); return; }
@@ -782,7 +804,8 @@ const App: React.FC = () => {
       case 'chapterView': return selectedStory && selectedVolumeId && selectedChapterId ? <ChapterView story={selectedStory} volumeId={selectedVolumeId} chapterId={selectedChapterId} comments={selectedChapterComments} onNavigateChapter={navigateChapterInView} onGoToStoryDetail={(_, volId) => showStoryDetail(selectedStory, volId)} currentUser={currentUser} onAddComment={handleAddComment} onDeleteComment={(commentId) => handleDeleteComment(commentId, selectedStory.id)} onToggleCommentLike={handleToggleCommentLike} onTogglePinComment={handleTogglePinComment} onLoginClick={() => showAuthView('login')} proseSizeClass={proseSizeClass} onProseSizeChange={handleProseSizeChange} onSelectChapter={handleChapterSelection}/> : (selectedStory ? showStoryDetail(selectedStory, selectedVolumeId) : showMainList(), null);
       case 'userProfile': return currentUser ? <UserProfileView currentUser={currentUser} onUpdateAvatar={handleUpdateAvatar} onUpdateRace={handleUpdateRace} onBack={showMainList} theme={theme} onUpdatePassword={handleUpdatePassword} onLeaveAllyTeam={handleLeaveAllyTeam} /> : (showMainList(), null);
       case 'userManagement': return currentUser?.role === 'admin' ? <UserManagementView currentUser={currentUser} onBack={showMainList}/> : (showMainList(), null);
-      case 'myStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser ? <MyStoriesView stories={managementStories} currentUser={currentUser} onAddNewStory={() => handleStartEditSession()} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} viewType="my" /> : (showMainList(), null));
+      case 'myStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser ? <MyStoriesView stories={managementStories} currentUser={currentUser} onAddNewStory={() => handleStartEditSession()} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /> : (showMainList(), null));
+      case 'bookmarkedStories': return isFetchingList ? <LoadingSpinner size="lg" /> : <BookmarkedStoriesView stories={bookmarkedStories} onSelectStory={handleSelectStoryFromList} onBack={showMainList} />;
       case 'allyManagement': return currentUser?.role === 'contractor' ? <AllyManagementView currentUser={currentUser} onBack={showMainList}/> : (showMainList(), null);
       case 'teamStories': return isFetchingList ? <LoadingSpinner size="lg" /> : (currentUser?.allyOf ? <TeamStoriesView stories={managementStories} currentUser={currentUser} onEditStory={handleStartEditSession} onDeleteStory={handleDeleteStory} onBack={showMainList} onSelectStory={handleSelectStoryFromList} /> : (showMainList(), null));
       case 'chat': return currentUser ? <ChatView currentUser={currentUser} chatThreads={chatThreads} onSendMessage={handleSendMessage} onMarkMessagesAsRead={handleMarkMessagesAsRead} onDeleteThread={handleDeleteThread} onBack={handleBackFromChat}/> : (showMainList(), null);
@@ -803,7 +826,7 @@ const App: React.FC = () => {
       <DynamicBackground settings={siteSettings} theme={theme} />
       <BackgroundMusicPlayer musicUrl={backgroundMusicUrl} isPlaying={isMusicPlaying} />
       
-      {hasAppChrome && <Navbar currentUser={currentUser} theme={theme} onToggleTheme={toggleTheme} onHomeClick={showMainList} onLoginClick={() => showAuthView('login')} onRegisterClick={() => showAuthView('register')} onLogoutClick={handleLogout} onSearchClick={() => setIsSearchOverlayOpen(true)} onShowUserProfile={showUserProfile} onShowUserManagement={showUserManagement} onShowMyStories={showMyStories} onShowAllyManagement={showAllyManagement} onShowTeamStories={showTeamStories} onUpdateAvatar={handleUpdateAvatar} onShowSiteSettings={showSiteSettings} isMusicPlaying={isMusicPlaying} onToggleMusic={toggleMusic}/>}
+      {hasAppChrome && <Navbar currentUser={currentUser} theme={theme} onToggleTheme={toggleTheme} onHomeClick={showMainList} onLoginClick={() => showAuthView('login')} onRegisterClick={() => showAuthView('register')} onLogoutClick={handleLogout} onSearchClick={() => setIsSearchOverlayOpen(true)} onShowUserProfile={showUserProfile} onShowUserManagement={showUserManagement} onShowMyStories={showMyStories} onShowAllyManagement={showAllyManagement} onShowTeamStories={showTeamStories} onUpdateAvatar={handleUpdateAvatar} onShowSiteSettings={showSiteSettings} onShowBookmarkedStories={showBookmarkedStories} isMusicPlaying={isMusicPlaying} onToggleMusic={toggleMusic}/>}
       
       <div className="flex-grow w-full">
         {hasAppChrome ? (
