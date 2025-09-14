@@ -212,7 +212,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   </div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(comment.timestamp)}</span>
                 </div>
-                 <div className="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200" dangerouslySetInnerHTML={{ __html: comment.text }} />
+                 <div className="comment-content prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200" dangerouslySetInnerHTML={{ __html: comment.text }} />
                 <div className="mt-2 flex items-center space-x-4 text-xs">
                   <button
                     onClick={() => {
