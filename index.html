@@ -49,6 +49,11 @@
                       fontFamily: theme('fontFamily.serif').join(', '),
                       fontWeight: '700',
                     },
+                    'img': {
+                        maxWidth: '250px',
+                        borderRadius: theme('borderRadius.lg'),
+                        boxShadow: theme('boxShadow.md'),
+                    }
                   },
                 },
                 invert: {
@@ -308,6 +313,20 @@
           -ms-user-select: none; /* IE 10+ and Edge */
           user-select: none; /* Standard syntax */
           -webkit-touch-callout: none; /* iOS Safari */
+        }
+
+        /* Image Uploading Placeholder */
+        .uploading-image {
+          opacity: 0.5;
+          position: relative;
+          display: inline-block;
+          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+          50% {
+            opacity: .4;
+          }
         }
       </style>
 <script type="importmap">
