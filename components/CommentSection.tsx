@@ -1,9 +1,10 @@
 
-
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Comment, User } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { DEFAULT_AVATAR_URL } from '../constants';
+import { fileService } from '../services/fileService';
+import { toAbsoluteUrl } from '../utils';
 
 interface CommentSectionProps {
   comments: Comment[];
@@ -28,14 +29,16 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     sectionTitle,
     storyCreatorId
 }) => {
-  const [newCommentText, setNewCommentText] = useState('');
+  const [newCommentHtml, setNewCommentHtml] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
+  const [replyHtml, setReplyHtml] = useState('');
   const isCurrentUserArchangel = currentUser?.race === 'Tổng lãnh thiên thần';
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const mainEditorRef = useRef<HTMLDivElement>(null);
+  const replyEditorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -47,9 +50,73 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [openMenuId]);
 
-  const handleCommentSubmit = async (e: React.FormEvent, parentId: string | null = null, text: string, setText: React.Dispatch<React.SetStateAction<string>>) => {
+  const handlePaste = async (e: React.ClipboardEvent<HTMLDivElement>, setTextState: React.Dispatch<React.SetStateAction<string>>) => {
     e.preventDefault();
-    if (!text.trim()) {
+    const items = Array.from(e.clipboardData.items);
+    let htmlContent = '';
+    let textContent = '';
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          const localUrl = URL.createObjectURL(file);
+          const placeholderId = `upload-${Date.now()}-${Math.random()}`;
+
+          // Insert placeholder immediately
+          document.execCommand('insertHTML', false, `<img id="${placeholderId}" src="${localUrl}" alt="uploading..." class="uploading-image max-w-xs rounded-md opacity-50" />`);
+          setTextState(e.currentTarget.innerHTML);
+
+          try {
+            const serverUrl = await fileService.upload(file);
+            const finalUrl = toAbsoluteUrl(serverUrl);
+            const editorDiv = e.currentTarget;
+            const placeholderImg = editorDiv.querySelector(`#${placeholderId}`) as HTMLImageElement;
+            if (placeholderImg) {
+              placeholderImg.src = finalUrl;
+              placeholderImg.alt = "Pasted image";
+              placeholderImg.classList.remove('uploading-image', 'opacity-50');
+              setTextState(editorDiv.innerHTML);
+            }
+          } catch (error) {
+            console.error('Image upload failed', error);
+            const editorDiv = e.currentTarget;
+            const placeholderImg = editorDiv.querySelector(`#${placeholderId}`) as HTMLImageElement;
+            if (placeholderImg) {
+                // Remove failed placeholder
+                placeholderImg.remove();
+                setTextState(editorDiv.innerHTML);
+            }
+          } finally {
+              URL.revokeObjectURL(localUrl);
+          }
+        }
+      } else if (item.type === 'text/plain') {
+        textContent += await new Promise<string>(resolve => item.getAsString(resolve));
+      } else if (item.type === 'text/html') {
+        htmlContent += await new Promise<string>(resolve => item.getAsString(resolve));
+      }
+    }
+
+    if (textContent && !htmlContent) {
+      htmlContent = textContent.replace(/\n/g, '<br>');
+    }
+    
+    if(htmlContent) {
+        document.execCommand('insertHTML', false, htmlContent);
+        setTextState(e.currentTarget.innerHTML);
+    }
+  };
+
+
+  const handleCommentSubmit = async (e: React.FormEvent, parentId: string | null = null, html: string, setHtml: React.Dispatch<React.SetStateAction<string>>) => {
+    e.preventDefault();
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    const textContent = tempDiv.textContent || "";
+    const hasImages = !!tempDiv.querySelector('img');
+
+    if (textContent.trim().length === 0 && !hasImages) {
       setCommentError(parentId ? "Reply cannot be empty." : "Comment cannot be empty.");
       return;
     }
@@ -62,8 +129,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     setIsSubmittingComment(true);
     setCommentError(null);
     try {
-      await onAddComment(text, parentId);
-      setText('');
+      await onAddComment(html, parentId);
+      setHtml('');
       if (parentId) {
         setReplyingTo(null);
       }
@@ -73,16 +140,6 @@ const CommentSection: React.FC<CommentSectionProps> = ({
       setIsSubmittingComment(false);
     }
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isSubmittingComment) {
-        e.preventDefault();
-        const form = e.currentTarget.closest('form');
-        if (form) {
-            form.requestSubmit();
-        }
-    }
-  };
   
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString(undefined, {
@@ -90,7 +147,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     });
   };
 
-  const formInputClasses = "w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none";
+  const formInputClasses = "w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-y min-h-[80px] overflow-y-auto";
   
   const renderCommentTree = (parentId: string | null) => {
     let commentList = comments.filter(comment => comment.parentId === parentId);
@@ -155,7 +212,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   </div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(comment.timestamp)}</span>
                 </div>
-                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap text-sm">{comment.text}</p>
+                 <div className="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200" dangerouslySetInnerHTML={{ __html: comment.text }} />
                 <div className="mt-2 flex items-center space-x-4 text-xs">
                   <button
                     onClick={() => {
@@ -188,7 +245,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                           return;
                       }
                       setReplyingTo(isReplying ? null : comment.id);
-                      setReplyText(''); 
+                      setReplyHtml(''); 
                     }}
                     disabled={!currentUser}
                     className="flex items-center font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -256,16 +313,17 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   )}
                 </div>
                 {isReplying && currentUser && (
-                  <form onSubmit={(e) => handleCommentSubmit(e, comment.id, replyText, setReplyText)} className="mt-3 flex items-start space-x-3">
+                  <form onSubmit={(e) => handleCommentSubmit(e, comment.id, replyHtml, setReplyHtml)} className="mt-3 flex items-start space-x-3">
                     <img src={currentUser.picture || DEFAULT_AVATAR_URL} alt="Your avatar" className={`w-8 h-8 rounded-full object-cover flex-shrink-0 border-2 border-gray-200 dark:border-gray-600 ${isCurrentUserArchangel ? 'archangel-avatar-halo' : ''}`}/>
                     <div className="flex-grow">
-                      <textarea
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder={`Trả lời ${username}... (Enter để gửi, Shift+Enter xuống dòng)`}
-                        rows={2}
-                        className={`${formInputClasses} text-sm`}
+                      <div
+                        ref={replyEditorRef}
+                        contentEditable
+                        onInput={e => setReplyHtml(e.currentTarget.innerHTML)}
+                        onPaste={(e) => handlePaste(e, setReplyHtml)}
+                        dangerouslySetInnerHTML={{ __html: replyHtml }}
+                        data-placeholder={`Trả lời ${username}...`}
+                        className={`${formInputClasses} content-editable text-sm`}
                         autoFocus
                       />
                       <div className="flex justify-end space-x-2 mt-2">
@@ -290,21 +348,22 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     <div className={sectionTitle ? "mt-8 border-t border-gray-200 dark:border-gray-700 pt-6" : ""}>
         {sectionTitle && <h4 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{sectionTitle} ({comments.length})</h4>}
         {currentUser ? (
-            <form onSubmit={(e) => handleCommentSubmit(e, null, newCommentText, setNewCommentText)} className="mb-6 flex items-start space-x-3">
+            <form onSubmit={(e) => handleCommentSubmit(e, null, newCommentHtml, setNewCommentHtml)} className="mb-6 flex items-start space-x-3">
                 <img 
                     src={currentUser.picture || DEFAULT_AVATAR_URL} 
                     alt="Your avatar"
                     className={`w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-gray-200 dark:border-gray-600 ${isCurrentUserArchangel ? 'archangel-avatar-halo' : ''}`}
                 />
                 <div className="flex-grow">
-                    <textarea
-                    value={newCommentText}
-                    onChange={(e) => setNewCommentText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Viết bình luận của bạn... (Enter để gửi, Shift+Enter để xuống dòng)"
-                    rows={3}
-                    className={formInputClasses}
-                    />
+                     <div
+                        ref={mainEditorRef}
+                        contentEditable
+                        onInput={e => setNewCommentHtml(e.currentTarget.innerHTML)}
+                        onPaste={(e) => handlePaste(e, setNewCommentHtml)}
+                        dangerouslySetInnerHTML={{ __html: newCommentHtml }}
+                        data-placeholder="Viết bình luận của bạn... Dán hình ảnh vào đây!"
+                        className={`${formInputClasses} content-editable`}
+                     />
                     {commentError && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{commentError}</p>}
                     <button
                     type="submit"
@@ -325,4 +384,4 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   )
 };
 
-export default memo(CommentSection);
+export default CommentSection;
